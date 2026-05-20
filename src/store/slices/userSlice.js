@@ -1,3 +1,19 @@
+/**
+ * @file userSlice.js
+ * @description Redux slice that manages the authenticated user's profile.
+ *
+ * State shape:
+ * @typedef {object} UserState
+ * @property {string} name   - Full name (max 50 chars).
+ * @property {string} email  - Email address.
+ * @property {string} phone  - Numeric phone number.
+ *
+ * Actions exported:
+ *   setUserProfile({ name, email, phone }) → persists validated profile data
+ *   clearUserProfile()                     → resets all fields (e.g. on logout)
+ *
+ * TODO: Add `gender` field once the ProfileScreen dropdown is implemented.
+ */
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {

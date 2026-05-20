@@ -1,12 +1,32 @@
+/**
+ * @file RideOptionsScreen.js
+ * @description Displays the available vehicle categories for the current trip.
+ * Shows the distance and ETA calculated by the Distance Matrix API (stored in
+ * Redux), and lets the user pick a vehicle tier before confirming the ride.
+ *
+ * Vehicle tiers and mock fares:
+ *   - Economico → $95.00
+ *   - XL        → $140.00
+ *   - Premium   → $220.00
+ *
+ * TODO: Replace mock fares with a real pricing algorithm based on distance.
+ */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { setSelectedVehicle } from '../store/slices/rideSlice';
 
+/** Available vehicle categories. Order determines display order on screen. */
 const VEHICLES = ['Economico', 'XL', 'Premium'];
 
+/**
+ * RideOptionsScreen component.
+ * Reads trip metrics and selected vehicle from the Redux ride slice.
+ * Dispatches setSelectedVehicle when the user taps a different tier.
+ */
 function RideOptionsScreen() {
   const dispatch = useDispatch();
+  // distanceText and etaText come from the Distance Matrix API result
   const { distanceText, etaText, selectedVehicle } = useSelector(state => state.ride);
 
   return (
@@ -34,6 +54,12 @@ function RideOptionsScreen() {
   );
 }
 
+/**
+ * Returns a hardcoded fare estimate string for the given vehicle tier.
+ * This is a placeholder until real dynamic pricing is implemented.
+ * @param {'Economico' | 'XL' | 'Premium'} vehicle - Selected vehicle tier.
+ * @returns {string} Formatted fare amount (e.g. '95.00').
+ */
 function mockFareByVehicle(vehicle) {
   if (vehicle === 'Economico') {
     return '95.00';

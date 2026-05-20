@@ -1,3 +1,17 @@
+/**
+ * @file HomeScreen.js
+ * @description Main screen of the app. Handles destination search using Google
+ * Places Autocomplete, resolves coordinates via Place Details, calculates
+ * distance and ETA through Distance Matrix, and dispatches the trip data
+ * to Redux before navigating to RideOptionsScreen.
+ *
+ * Flow:
+ *   1. On mount → request location permission → get current coordinates (origin)
+ *   2. User types a destination → debounced autocomplete suggestions appear
+ *   3. User selects a suggestion → Place Details resolves exact coordinates
+ *   4. "See ride options" → Distance Matrix calculates distance + ETA
+ *   5. Redux is updated (origin, destination, tripMetrics) → navigate to RideOptions
+ */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,8 +33,19 @@ import { getPlaceDetails } from '../utils/playDetailServices';
 import { getDistanceMatrix } from '../utils/distanceMatrixService';
 import { setDestination, setOrigin, setTripMetrics } from '../store/slices/rideSlice';
 
+/**
+ * Generates a random session token to group an autocomplete + place details
+ * call pair. Google billing counts grouped calls as a single session.
+ * @returns {string} A short alphanumeric token.
+ */
 const newSessionToken = () => Math.random().toString(36).slice(2);
 
+/**
+ * Requests ACCESS_FINE_LOCATION permission on Android at runtime.
+ * On iOS the permission is handled through Info.plist; this function
+ * always returns true for non-Android platforms.
+ * @returns {Promise<boolean>} True if permission was granted.
+ */
 async function requestLocationPermission() {
   if (Platform.OS !== 'android') {
     return true;
@@ -37,18 +62,34 @@ async function requestLocationPermission() {
   return granted === PermissionsAndroid.RESULTS.GRANTED;
 }
 
+/**
+ * HomeScreen component.
+ *
+ * @param {object} props
+ * @param {import('@react-navigation/native').NavigationProp<any>} props.navigation
+ *   React Navigation prop used to move to RideOptionsScreen.
+ */
 function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
 
+  // Text currently shown in the search input
   const [query, setQuery] = useState('');
+  // List of place predictions returned by the Autocomplete API
   const [suggestions, setSuggestions] = useState([]);
+  // True while waiting for autocomplete API response
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  // Resolved { lat, lng } of the destination chosen by the user
   const [selectedPlace, setSelectedPlace] = useState(null);
+  // Current device coordinates used as trip origin
   const [userLocation, setUserLocation] = useState(null);
+  // True while the Distance Matrix call + Redux dispatch are in progress
   const [loadingTrip, setLoadingTrip] = useState(false);
 
+  // Persists the session token across re-renders without triggering effects
   const sessionTokenRef = useRef(newSessionToken());
 
+  // Request location permission and obtain the device's current position on mount.
+  // The coordinates are stored as the trip origin in local state.
   useEffect(() => {
     (async () => {
       const allowed = await requestLocationPermission();
@@ -69,6 +110,11 @@ function HomeScreen({ navigation }) {
     })();
   }, []);
 
+  /**
+   * Debounced function that calls the Autocomplete API after the user stops
+   * typing for 400 ms. Skips the call when the input is shorter than 3 chars
+   * to avoid unnecessary API usage.
+   */
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchSuggestions = useCallback(
     debounce(async input => {
@@ -89,12 +135,26 @@ function HomeScreen({ navigation }) {
     [],
   );
 
+  /**
+   * Handles every keystroke in the destination input.
+   * Clears the previously resolved place so the trip button stays disabled
+   * until the user selects a new suggestion.
+   * @param {string} text - Current input value.
+   */
   const onChangeText = text => {
     setQuery(text);
     setSelectedPlace(null);
     fetchSuggestions(text);
   };
 
+  /**
+   * Called when the user taps a suggestion from the dropdown list.
+   * Fills the input with the full description, closes the list, then
+   * resolves precise coordinates via Place Details API.
+   * A new session token is generated after the Details call closes the
+   * billing session.
+   * @param {{ place_id: string, description: string }} item - Autocomplete prediction.
+   */
   const onSelectSuggestion = async item => {
     setQuery(item.description);
     setSuggestions([]);
@@ -104,12 +164,19 @@ function HomeScreen({ navigation }) {
         lat: place.geometry.location.lat,
         lng: place.geometry.location.lng,
       });
+      // Rotate the session token so the next autocomplete starts a fresh session
       sessionTokenRef.current = newSessionToken();
     } catch (err) {
       console.warn('Place details error:', err.message);
     }
   };
 
+  /**
+   * Initiates the trip request flow.
+   * Calls Distance Matrix API to get real distance and ETA, dispatches
+   * origin, destination and metrics to Redux, then navigates to RideOptions.
+   * The button is disabled if origin or destination are not yet resolved.
+   */
   const onStartTrip = async () => {
     if (!userLocation || !selectedPlace) {
       return;
@@ -134,6 +201,7 @@ function HomeScreen({ navigation }) {
     }
   };
 
+  // Enable the CTA only when both origin (GPS) and destination (selected place) are ready
   const canStartTrip = !!userLocation && !!selectedPlace && !loadingTrip;
 
   return (

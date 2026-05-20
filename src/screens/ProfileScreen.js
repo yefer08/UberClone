@@ -1,16 +1,38 @@
+/**
+ * @file ProfileScreen.js
+ * @description Allows the user to view and update their profile information.
+ *
+ * Validation rules applied before dispatching to Redux:
+ *   - All fields (name, email, phone) are required
+ *   - Name must not exceed 50 characters
+ *   - Email must match a basic format (x@x.x)
+ *   - Phone must be numeric only
+ *
+ * TODO: Add gender dropdown field and bilingual ES/EN support.
+ */
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { setUserProfile } from '../store/slices/userSlice';
 
+/**
+ * ProfileScreen component.
+ * Pre-fills fields with the current values stored in the Redux user slice.
+ * On save, validates all fields and dispatches the updated profile.
+ */
 function ProfileScreen() {
   const dispatch = useDispatch();
+  // Read current profile values from Redux to pre-fill the form
   const user = useSelector(state => state.user);
 
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [phone, setPhone] = useState(user.phone);
 
+  /**
+   * Validates all form fields and dispatches the updated profile to Redux.
+   * Shows an Alert for the first validation error found.
+   */
   const onSave = () => {
     if (!name.trim() || !email.trim() || !phone.trim()) {
       Alert.alert('Validation', 'All fields are required.');
