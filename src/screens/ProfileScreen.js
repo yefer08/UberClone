@@ -22,6 +22,24 @@ const GENDER_OPTIONS = [
   { label: 'Other', value: 'other' },
 ];
 
+const PROFILE_TEXT = {
+  title: 'Profile',
+  nameLabel: 'Name',
+  emailLabel: 'Email',
+  phoneLabel: 'Phone',
+  genderLabel: 'Gender',
+  saveButton: 'Save Profile',
+  validationTitle: 'Validation',
+  requiredFields: 'All fields are required.',
+  nameLimit: 'Name must be 50 characters or less.',
+  invalidEmail: 'Enter a valid email address.',
+  invalidPhone: 'Phone must be numeric.',
+  savedTitle: 'Saved',
+  savedMessage: 'Profile updated successfully.',
+  summaryTitle: 'Saved profile preview',
+  notAvailable: 'N/A',
+};
+
 /**
  * ProfileScreen component.
  * Pre-fills fields with the current values stored in the Redux user slice.
@@ -43,22 +61,22 @@ function ProfileScreen() {
    */
   const onSave = () => {
     if (!name.trim() || !email.trim() || !phone.trim() || !gender) {
-      Alert.alert('Validation', 'All fields are required.');
+      Alert.alert(PROFILE_TEXT.validationTitle, PROFILE_TEXT.requiredFields);
       return;
     }
 
     if (name.length > 50) {
-      Alert.alert('Validation', 'Name must be 50 characters or less.');
+      Alert.alert(PROFILE_TEXT.validationTitle, PROFILE_TEXT.nameLimit);
       return;
     }
 
     if (!/^\S+@\S+\.\S+$/.test(email)) {
-      Alert.alert('Validation', 'Enter a valid email address.');
+      Alert.alert(PROFILE_TEXT.validationTitle, PROFILE_TEXT.invalidEmail);
       return;
     }
 
     if (!/^\d+$/.test(phone)) {
-      Alert.alert('Validation', 'Phone must be numeric.');
+      Alert.alert(PROFILE_TEXT.validationTitle, PROFILE_TEXT.invalidPhone);
       return;
     }
 
@@ -71,14 +89,14 @@ function ProfileScreen() {
       }),
     );
 
-    Alert.alert('Saved', 'Profile updated successfully.');
+    Alert.alert(PROFILE_TEXT.savedTitle, PROFILE_TEXT.savedMessage);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
+      <Text style={styles.title}>{PROFILE_TEXT.title}</Text>
 
-      <Text style={styles.label}>Name</Text>
+      <Text style={styles.label}>{PROFILE_TEXT.nameLabel}</Text>
       <TextInput
         style={styles.input}
         value={name}
@@ -86,7 +104,7 @@ function ProfileScreen() {
         placeholder="John Doe"
       />
 
-      <Text style={styles.label}>Email</Text>
+      <Text style={styles.label}>{PROFILE_TEXT.emailLabel}</Text>
       <TextInput
         style={styles.input}
         value={email}
@@ -96,7 +114,7 @@ function ProfileScreen() {
         placeholder="john@email.com"
       />
 
-      <Text style={styles.label}>Phone</Text>
+      <Text style={styles.label}>{PROFILE_TEXT.phoneLabel}</Text>
       <TextInput
         style={styles.input}
         value={phone}
@@ -105,7 +123,7 @@ function ProfileScreen() {
         placeholder="5512345678"
       />
 
-      <Text style={styles.label}>Gender</Text>
+      <Text style={styles.label}>{PROFILE_TEXT.genderLabel}</Text>
       <View style={styles.genderRow}>
         {GENDER_OPTIONS.map(option => {
           const isSelected = option.value === gender;
@@ -124,8 +142,24 @@ function ProfileScreen() {
       </View>
 
       <TouchableOpacity style={styles.button} onPress={onSave}>
-        <Text style={styles.buttonText}>Save Profile</Text>
+        <Text style={styles.buttonText}>{PROFILE_TEXT.saveButton}</Text>
       </TouchableOpacity>
+
+      <View style={styles.previewCard}>
+        <Text style={styles.previewTitle}>{PROFILE_TEXT.summaryTitle}</Text>
+        <Text style={styles.previewText}>
+          {PROFILE_TEXT.nameLabel}: {name.trim() || PROFILE_TEXT.notAvailable}
+        </Text>
+        <Text style={styles.previewText}>
+          {PROFILE_TEXT.emailLabel}: {email.trim() || PROFILE_TEXT.notAvailable}
+        </Text>
+        <Text style={styles.previewText}>
+          {PROFILE_TEXT.phoneLabel}: {phone.trim() || PROFILE_TEXT.notAvailable}
+        </Text>
+        <Text style={styles.previewText}>
+          {PROFILE_TEXT.genderLabel}: {gender || PROFILE_TEXT.notAvailable}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -191,6 +225,25 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  previewCard: {
+    marginTop: 18,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 14,
+  },
+  previewTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  previewText: {
+    fontSize: 13,
+    color: '#374151',
+    marginBottom: 4,
   },
 });
 
