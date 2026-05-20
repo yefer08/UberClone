@@ -28,10 +28,18 @@ import {
 import { useDispatch } from 'react-redux';
 import debounce from 'lodash.debounce';
 import Geolocation from 'react-native-geolocation-service';
+import MapView, { Marker, Polyline } from 'react-native-maps';
+import polyline from '@mapbox/polyline';
 import { autocompletePlaces } from '../utils/autocompleteServices';
 import { getPlaceDetails } from '../utils/playDetailServices';
 import { getDistanceMatrix } from '../utils/distanceMatrixService';
-import { setDestination, setOrigin, setTripMetrics } from '../store/slices/rideSlice';
+import { getDirections } from '../utils/directionsService';
+import {
+  setDestination,
+  setOrigin,
+  setRouteCoords as setRouteCoordsInStore,
+  setTripMetrics,
+} from '../store/slices/rideSlice';
 
 /**
  * Generates a random session token to group an autocomplete + place details
@@ -80,6 +88,8 @@ function HomeScreen({ navigation }) {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   // Resolved { lat, lng } of the destination chosen by the user
   const [selectedPlace, setSelectedPlace] = useState(null);
+  // Decoded coordinates used to render a route polyline on the map
+  const [routeCoords, setRouteCoords] = useState([]);
   // Current device coordinates used as trip origin
   const [userLocation, setUserLocation] = useState(null);
   // True while the Distance Matrix call + Redux dispatch are in progress
@@ -144,6 +154,7 @@ function HomeScreen({ navigation }) {
   const onChangeText = text => {
     setQuery(text);
     setSelectedPlace(null);
+    setRouteCoords([]);
     fetchSuggestions(text);
   };
 
@@ -160,14 +171,31 @@ function HomeScreen({ navigation }) {
     setSuggestions([]);
     try {
       const place = await getPlaceDetails(item.place_id, sessionTokenRef.current);
-      setSelectedPlace({
+      const destinationCoords = {
         lat: place.geometry.location.lat,
         lng: place.geometry.location.lng,
-      });
+      };
+      setSelectedPlace(destinationCoords);
+
+      if (userLocation) {
+        const routes = await getDirections(userLocation, destinationCoords);
+        const encodedPath = routes?.[0]?.overview_polyline?.points;
+        if (encodedPath) {
+          const decodedPath = polyline.decode(encodedPath).map(point => ({
+            latitude: point[0],
+            longitude: point[1],
+          }));
+          setRouteCoords(decodedPath);
+        } else {
+          setRouteCoords([]);
+        }
+      }
+
       // Rotate the session token so the next autocomplete starts a fresh session
       sessionTokenRef.current = newSessionToken();
     } catch (err) {
       console.warn('Place details error:', err.message);
+      Alert.alert('Error', 'Could not load destination details. Please try again.');
     }
   };
 
@@ -186,6 +214,7 @@ function HomeScreen({ navigation }) {
       const metrics = await getDistanceMatrix(userLocation, selectedPlace);
       dispatch(setOrigin(userLocation));
       dispatch(setDestination(selectedPlace));
+      dispatch(setRouteCoordsInStore(routeCoords));
       dispatch(
         setTripMetrics({
           distanceText: metrics.distance.text,
@@ -204,68 +233,104 @@ function HomeScreen({ navigation }) {
   // Enable the CTA only when both origin (GPS) and destination (selected place) are ready
   const canStartTrip = !!userLocation && !!selectedPlace && !loadingTrip;
 
+  const mapRegion = userLocation
+    ? {
+        latitude: userLocation.lat,
+        longitude: userLocation.lng,
+        latitudeDelta: 0.04,
+        longitudeDelta: 0.04,
+      }
+    : {
+        latitude: 19.4326,
+        longitude: -99.1332,
+        latitudeDelta: 0.08,
+        longitudeDelta: 0.08,
+      };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Where to?</Text>
 
-      <View style={styles.inputWrapper}>
-        <TextInput
-          style={styles.input}
-          placeholder="Search destination..."
-          placeholderTextColor="#9CA3AF"
-          value={query}
-          onChangeText={onChangeText}
-          autoCorrect={false}
-        />
-        {loadingSuggestions && (
-          <ActivityIndicator style={styles.inputSpinner} size="small" color="#111827" />
-        )}
+      <View style={styles.mapCard}>
+        <MapView style={styles.map} region={mapRegion}>
+          {userLocation && (
+            <Marker
+              coordinate={{ latitude: userLocation.lat, longitude: userLocation.lng }}
+              title="Your location"
+            />
+          )}
+          {selectedPlace && (
+            <Marker
+              coordinate={{ latitude: selectedPlace.lat, longitude: selectedPlace.lng }}
+              title="Destination"
+            />
+          )}
+          {routeCoords.length > 1 && (
+            <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
+          )}
+        </MapView>
       </View>
 
-      {suggestions.length > 0 && (
-        <FlatList
-          data={suggestions}
-          keyExtractor={item => item.place_id}
-          style={styles.suggestionList}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.suggestionItem}
-              onPress={() => onSelectSuggestion(item)}
-            >
-              <Text style={styles.suggestionMain}>
-                {item.structured_formatting.main_text}
-              </Text>
-              <Text style={styles.suggestionSecondary}>
-                {item.structured_formatting.secondary_text}
-              </Text>
-            </TouchableOpacity>
+      <View style={styles.controlsCard}>
+        <View style={styles.inputWrapper}>
+          <TextInput
+            style={styles.input}
+            placeholder="Search destination..."
+            placeholderTextColor="#9CA3AF"
+            value={query}
+            onChangeText={onChangeText}
+            autoCorrect={false}
+          />
+          {loadingSuggestions && (
+            <ActivityIndicator style={styles.inputSpinner} size="small" color="#111827" />
           )}
-        />
-      )}
+        </View>
 
-      {!userLocation && (
-        <Text style={styles.locationNote}>Getting your location...</Text>
-      )}
-
-      <TouchableOpacity
-        style={[styles.primaryButton, !canStartTrip && styles.primaryButtonDisabled]}
-        onPress={onStartTrip}
-        disabled={!canStartTrip}
-      >
-        {loadingTrip ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.buttonText}>See ride options</Text>
+        {suggestions.length > 0 && (
+          <FlatList
+            data={suggestions}
+            keyExtractor={item => item.place_id}
+            style={styles.suggestionList}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.suggestionItem}
+                onPress={() => onSelectSuggestion(item)}
+              >
+                <Text style={styles.suggestionMain}>
+                  {item.structured_formatting.main_text}
+                </Text>
+                <Text style={styles.suggestionSecondary}>
+                  {item.structured_formatting.secondary_text}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
         )}
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.secondaryButton}
-        onPress={() => navigation.navigate('Profile')}
-      >
-        <Text style={styles.secondaryButtonText}>Go to Profile</Text>
-      </TouchableOpacity>
+        {!userLocation && (
+          <Text style={styles.locationNote}>Getting your location...</Text>
+        )}
+
+        <TouchableOpacity
+          style={[styles.primaryButton, !canStartTrip && styles.primaryButtonDisabled]}
+          onPress={onStartTrip}
+          disabled={!canStartTrip}
+        >
+          {loadingTrip ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>See ride options</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('Profile')}
+        >
+          <Text style={styles.secondaryButtonText}>Go to Profile</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -273,14 +338,32 @@ function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#F3F5F7',
   },
   title: {
     fontSize: 26,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 20,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 14,
+  },
+  mapCard: {
+    marginHorizontal: 20,
+    height: 260,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  map: {
+    flex: 1,
+  },
+  controlsCard: {
+    flex: 1,
+    marginTop: 14,
+    marginHorizontal: 20,
   },
   inputWrapper: {
     flexDirection: 'row',
