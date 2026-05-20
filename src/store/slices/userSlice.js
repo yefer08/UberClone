@@ -7,12 +7,11 @@
  * @property {string} name   - Full name (max 50 chars).
  * @property {string} email  - Email address.
  * @property {string} phone  - Numeric phone number.
+ * @property {'male' | 'female' | 'other' | ''} gender - Selected gender value.
  *
  * Actions exported:
- *   setUserProfile({ name, email, phone }) → persists validated profile data
+ *   setUserProfile({ name, email, phone, gender }) → persists validated profile data
  *   clearUserProfile()                     → resets all fields (e.g. on logout)
- *
- * TODO: Add `gender` field once the ProfileScreen dropdown is implemented.
  */
 import { createSlice } from '@reduxjs/toolkit';
 
@@ -20,6 +19,7 @@ const initialState = {
   name: '',
   email: '',
   phone: '',
+  gender: '',
 };
 
 const userSlice = createSlice({
@@ -30,11 +30,13 @@ const userSlice = createSlice({
       state.name = action.payload.name;
       state.email = action.payload.email;
       state.phone = action.payload.phone;
+      state.gender = action.payload.gender;
     },
     clearUserProfile: state => {
       state.name = '';
       state.email = '';
       state.phone = '';
+      state.gender = '';
     },
   },
 });

@@ -4,16 +4,23 @@
  *
  * Validation rules applied before dispatching to Redux:
  *   - All fields (name, email, phone) are required
+ *   - Gender selection is required
  *   - Name must not exceed 50 characters
  *   - Email must match a basic format (x@x.x)
  *   - Phone must be numeric only
  *
- * TODO: Add gender dropdown field and bilingual ES/EN support.
+ * TODO: Add bilingual ES/EN support.
  */
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { setUserProfile } from '../store/slices/userSlice';
+
+const GENDER_OPTIONS = [
+  { label: 'Male', value: 'male' },
+  { label: 'Female', value: 'female' },
+  { label: 'Other', value: 'other' },
+];
 
 /**
  * ProfileScreen component.
@@ -28,13 +35,14 @@ function ProfileScreen() {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [phone, setPhone] = useState(user.phone);
+  const [gender, setGender] = useState(user.gender);
 
   /**
    * Validates all form fields and dispatches the updated profile to Redux.
    * Shows an Alert for the first validation error found.
    */
   const onSave = () => {
-    if (!name.trim() || !email.trim() || !phone.trim()) {
+    if (!name.trim() || !email.trim() || !phone.trim() || !gender) {
       Alert.alert('Validation', 'All fields are required.');
       return;
     }
@@ -59,6 +67,7 @@ function ProfileScreen() {
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim(),
+        gender,
       }),
     );
 
@@ -96,6 +105,24 @@ function ProfileScreen() {
         placeholder="5512345678"
       />
 
+      <Text style={styles.label}>Gender</Text>
+      <View style={styles.genderRow}>
+        {GENDER_OPTIONS.map(option => {
+          const isSelected = option.value === gender;
+          return (
+            <TouchableOpacity
+              key={option.value}
+              style={[styles.genderChip, isSelected && styles.genderChipSelected]}
+              onPress={() => setGender(option.value)}
+            >
+              <Text style={[styles.genderChipText, isSelected && styles.genderChipTextSelected]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       <TouchableOpacity style={styles.button} onPress={onSave}>
         <Text style={styles.buttonText}>Save Profile</Text>
       </TouchableOpacity>
@@ -127,6 +154,31 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+  },
+  genderChip: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  genderChipSelected: {
+    borderColor: '#111827',
+    backgroundColor: '#EEF2FF',
+  },
+  genderChipText: {
+    color: '#374151',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  genderChipTextSelected: {
+    color: '#111827',
   },
   button: {
     marginTop: 20,
