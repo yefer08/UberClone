@@ -1,3 +1,5 @@
+
+
 /**
  * @file rideSlice.js
  * @description Redux slice that manages the active trip state.
@@ -12,12 +14,12 @@
  * @property {string} selectedVehicle - Active vehicle tier ('Economico' | 'XL' | 'Premium').
  *
  * Actions exported:
- *   setOrigin(coords)         → stores the pickup coordinates
- *   setDestination(coords)    → stores the destination coordinates
- *   setRouteCoords(coords)    → stores decoded map route points
- *   setTripMetrics({distanceText, etaText}) → stores Distance Matrix result
- *   setSelectedVehicle(tier)  → updates the chosen vehicle category
- *   resetRide()               → clears all trip data (e.g. after trip completes)
+ *   setOrigin(coords)         -> stores the pickup coordinates
+ *   setDestination(coords)    -> stores the destination coordinates
+ *   setRouteCoords(coords)    -> stores decoded map route points
+ *   setTripMetrics({distanceText, etaText}) -> stores Distance Matrix result
+ *   setSelectedVehicle(tier)  -> updates the chosen vehicle category
+ *   resetRide()               -> clears all trip data (e.g. after trip completes)
  */
 import { createSlice } from '@reduxjs/toolkit';
 
