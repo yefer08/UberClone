@@ -145,6 +145,29 @@ function HomeScreen({ navigation }) {
     [],
   );
 
+  const updateRouteFromDirections = async (originCoords, destinationCoords) => {
+    try {
+      const routes = await getDirections(originCoords, destinationCoords);
+      const encodedPath = routes?.[0]?.overview_polyline?.points;
+      
+      if (!encodedPath) {
+        setRouteCoords([]);
+        Alert.alert('Route', 'No route available for this destination.');
+        return;
+      }
+       
+      const decodedPath = polyline.decode(encodedPath).map(point => ({
+        latitude: point[0],
+        longitude: point[1],
+      }));
+      
+      setRouteCoords(decodedPath);
+    } catch (err) {
+      setRouteCoords([]);
+      Alert.alert('Error', 'Could not calculate route path. Please try again.');
+    }
+  };
+
   /**
    * Handles every keystroke in the destination input.
    * Clears the previously resolved place so the trip button stays disabled
@@ -178,7 +201,7 @@ function HomeScreen({ navigation }) {
       setSelectedPlace(destinationCoords);
 
       if (userLocation) {
-        const routes = await getDirections(userLocation, destinationCoords);
+        await updateRouteFromDirections(userLocation, destinationCoords);
         const encodedPath = routes?.[0]?.overview_polyline?.points;
         if (encodedPath) {
           const decodedPath = polyline.decode(encodedPath).map(point => ({
