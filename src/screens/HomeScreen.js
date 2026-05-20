@@ -26,6 +26,7 @@ import {
   View,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import debounce from 'lodash.debounce';
 import Geolocation from 'react-native-geolocation-service';
 import MapView, { Marker, Polyline } from 'react-native-maps';
@@ -54,17 +55,17 @@ const newSessionToken = () => Math.random().toString(36).slice(2);
  * always returns true for non-Android platforms.
  * @returns {Promise<boolean>} True if permission was granted.
  */
-async function requestLocationPermission() {
+async function requestLocationPermission(t) {
   if (Platform.OS !== 'android') {
     return true;
   }
   const granted = await PermissionsAndroid.request(
     PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     {
-      title: 'Location permission',
-      message: 'This app needs access to your location to show your current position.',
-      buttonPositive: 'Allow',
-      buttonNegative: 'Deny',
+      title: t('home.locationPermissionTitle'),
+      message: t('home.locationPermissionMessage'),
+      buttonPositive: t('common.allow'),
+      buttonNegative: t('common.deny'),
     },
   );
   return granted === PermissionsAndroid.RESULTS.GRANTED;
@@ -79,6 +80,7 @@ async function requestLocationPermission() {
  */
 function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   // Text currently shown in the search input
   const [query, setQuery] = useState('');
@@ -102,9 +104,9 @@ function HomeScreen({ navigation }) {
   // The coordinates are stored as the trip origin in local state.
   useEffect(() => {
     (async () => {
-      const allowed = await requestLocationPermission();
+      const allowed = await requestLocationPermission(t);
       if (!allowed) {
-        Alert.alert('Permission denied', 'Location permission is required to use this feature.');
+        Alert.alert(t('home.permissionDeniedTitle'), t('home.permissionDeniedMessage'));
         return;
       }
       Geolocation.getCurrentPosition(
@@ -118,7 +120,7 @@ function HomeScreen({ navigation }) {
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
       );
     })();
-  }, []);
+  }, [t]);
 
   /**
    * Debounced function that calls the Autocomplete API after the user stops
@@ -195,7 +197,7 @@ function HomeScreen({ navigation }) {
       sessionTokenRef.current = newSessionToken();
     } catch (err) {
       console.warn('Place details error:', err.message);
-      Alert.alert('Error', 'Could not load destination details. Please try again.');
+      Alert.alert(t('common.error'), t('home.destinationLoadError'));
     }
   };
 
@@ -224,7 +226,7 @@ function HomeScreen({ navigation }) {
       navigation.navigate('RideOptions');
     } catch (err) {
       console.warn('Distance matrix error:', err.message);
-      Alert.alert('Error', 'Could not calculate the route. Please try again.');
+      Alert.alert(t('common.error'), t('home.routeError'));
     } finally {
       setLoadingTrip(false);
     }
@@ -249,20 +251,20 @@ function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Where to?</Text>
+      <Text style={styles.title}>{t('home.title')}</Text>
 
       <View style={styles.mapCard}>
         <MapView style={styles.map} region={mapRegion}>
           {userLocation && (
             <Marker
               coordinate={{ latitude: userLocation.lat, longitude: userLocation.lng }}
-              title="Your location"
+              title={t('home.yourLocation')}
             />
           )}
           {selectedPlace && (
             <Marker
               coordinate={{ latitude: selectedPlace.lat, longitude: selectedPlace.lng }}
-              title="Destination"
+              title={t('home.destination')}
             />
           )}
           {routeCoords.length > 1 && (
@@ -275,7 +277,7 @@ function HomeScreen({ navigation }) {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Search destination..."
+            placeholder={t('home.searchPlaceholder')}
             placeholderTextColor="#9CA3AF"
             value={query}
             onChangeText={onChangeText}
@@ -309,7 +311,7 @@ function HomeScreen({ navigation }) {
         )}
 
         {!userLocation && (
-          <Text style={styles.locationNote}>Getting your location...</Text>
+          <Text style={styles.locationNote}>{t('home.gettingLocation')}</Text>
         )}
 
         <TouchableOpacity
@@ -320,7 +322,7 @@ function HomeScreen({ navigation }) {
           {loadingTrip ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.buttonText}>See ride options</Text>
+            <Text style={styles.buttonText}>{t('home.seeRideOptions')}</Text>
           )}
         </TouchableOpacity>
 
@@ -328,7 +330,7 @@ function HomeScreen({ navigation }) {
           style={styles.secondaryButton}
           onPress={() => navigation.navigate('Profile')}
         >
-          <Text style={styles.secondaryButtonText}>Go to Profile</Text>
+          <Text style={styles.secondaryButtonText}>{t('home.goToProfile')}</Text>
         </TouchableOpacity>
       </View>
     </View>

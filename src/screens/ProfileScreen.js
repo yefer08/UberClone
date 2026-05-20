@@ -14,31 +14,14 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { setUserProfile } from '../store/slices/userSlice';
 
 const GENDER_OPTIONS = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
-  { label: 'Other', value: 'other' },
+  { value: 'male', translationKey: 'profile.male' },
+  { value: 'female', translationKey: 'profile.female' },
+  { value: 'other', translationKey: 'profile.other' },
 ];
-
-const PROFILE_TEXT = {
-  title: 'Profile',
-  nameLabel: 'Name',
-  emailLabel: 'Email',
-  phoneLabel: 'Phone',
-  genderLabel: 'Gender',
-  saveButton: 'Save Profile',
-  validationTitle: 'Validation',
-  requiredFields: 'All fields are required.',
-  nameLimit: 'Name must be 50 characters or less.',
-  invalidEmail: 'Enter a valid email address.',
-  invalidPhone: 'Phone must be numeric.',
-  savedTitle: 'Saved',
-  savedMessage: 'Profile updated successfully.',
-  summaryTitle: 'Saved profile preview',
-  notAvailable: 'N/A',
-};
 
 /**
  * ProfileScreen component.
@@ -47,6 +30,7 @@ const PROFILE_TEXT = {
  */
 function ProfileScreen() {
   const dispatch = useDispatch();
+  const { t, i18n } = useTranslation();
   // Read current profile values from Redux to pre-fill the form
   const user = useSelector(state => state.user);
 
@@ -61,22 +45,22 @@ function ProfileScreen() {
    */
   const onSave = () => {
     if (!name.trim() || !email.trim() || !phone.trim() || !gender) {
-      Alert.alert(PROFILE_TEXT.validationTitle, PROFILE_TEXT.requiredFields);
+      Alert.alert(t('profile.validationTitle'), t('profile.requiredFields'));
       return;
     }
 
     if (name.length > 50) {
-      Alert.alert(PROFILE_TEXT.validationTitle, PROFILE_TEXT.nameLimit);
+      Alert.alert(t('profile.validationTitle'), t('profile.nameLimit'));
       return;
     }
 
     if (!/^\S+@\S+\.\S+$/.test(email)) {
-      Alert.alert(PROFILE_TEXT.validationTitle, PROFILE_TEXT.invalidEmail);
+      Alert.alert(t('profile.validationTitle'), t('profile.invalidEmail'));
       return;
     }
 
     if (!/^\d+$/.test(phone)) {
-      Alert.alert(PROFILE_TEXT.validationTitle, PROFILE_TEXT.invalidPhone);
+      Alert.alert(t('profile.validationTitle'), t('profile.invalidPhone'));
       return;
     }
 
@@ -89,14 +73,14 @@ function ProfileScreen() {
       }),
     );
 
-    Alert.alert(PROFILE_TEXT.savedTitle, PROFILE_TEXT.savedMessage);
+    Alert.alert(t('profile.savedTitle'), t('profile.savedMessage'));
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{PROFILE_TEXT.title}</Text>
+      <Text style={styles.title}>{t('profile.title')}</Text>
 
-      <Text style={styles.label}>{PROFILE_TEXT.nameLabel}</Text>
+      <Text style={styles.label}>{t('profile.nameLabel')}</Text>
       <TextInput
         style={styles.input}
         value={name}
@@ -104,7 +88,7 @@ function ProfileScreen() {
         placeholder="John Doe"
       />
 
-      <Text style={styles.label}>{PROFILE_TEXT.emailLabel}</Text>
+      <Text style={styles.label}>{t('profile.emailLabel')}</Text>
       <TextInput
         style={styles.input}
         value={email}
@@ -114,7 +98,7 @@ function ProfileScreen() {
         placeholder="john@email.com"
       />
 
-      <Text style={styles.label}>{PROFILE_TEXT.phoneLabel}</Text>
+      <Text style={styles.label}>{t('profile.phoneLabel')}</Text>
       <TextInput
         style={styles.input}
         value={phone}
@@ -123,7 +107,7 @@ function ProfileScreen() {
         placeholder="5512345678"
       />
 
-      <Text style={styles.label}>{PROFILE_TEXT.genderLabel}</Text>
+      <Text style={styles.label}>{t('profile.genderLabel')}</Text>
       <View style={styles.genderRow}>
         {GENDER_OPTIONS.map(option => {
           const isSelected = option.value === gender;
@@ -134,30 +118,66 @@ function ProfileScreen() {
               onPress={() => setGender(option.value)}
             >
               <Text style={[styles.genderChipText, isSelected && styles.genderChipTextSelected]}>
-                {option.label}
+                {t(option.translationKey)}
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
+      <Text style={styles.label}>{t('profile.languageLabel')}</Text>
+      <View style={styles.genderRow}>
+        <TouchableOpacity
+          style={[
+            styles.genderChip,
+            i18n.language.startsWith('es') && styles.genderChipSelected,
+          ]}
+          onPress={() => i18n.changeLanguage('es')}
+        >
+          <Text
+            style={[
+              styles.genderChipText,
+              i18n.language.startsWith('es') && styles.genderChipTextSelected,
+            ]}
+          >
+            {t('profile.languageSpanish')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.genderChip,
+            i18n.language.startsWith('en') && styles.genderChipSelected,
+          ]}
+          onPress={() => i18n.changeLanguage('en')}
+        >
+          <Text
+            style={[
+              styles.genderChipText,
+              i18n.language.startsWith('en') && styles.genderChipTextSelected,
+            ]}
+          >
+            {t('profile.languageEnglish')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.button} onPress={onSave}>
-        <Text style={styles.buttonText}>{PROFILE_TEXT.saveButton}</Text>
+        <Text style={styles.buttonText}>{t('profile.saveButton')}</Text>
       </TouchableOpacity>
 
       <View style={styles.previewCard}>
-        <Text style={styles.previewTitle}>{PROFILE_TEXT.summaryTitle}</Text>
+        <Text style={styles.previewTitle}>{t('profile.summaryTitle')}</Text>
         <Text style={styles.previewText}>
-          {PROFILE_TEXT.nameLabel}: {name.trim() || PROFILE_TEXT.notAvailable}
+          {t('profile.nameLabel')}: {name.trim() || t('common.notAvailable')}
         </Text>
         <Text style={styles.previewText}>
-          {PROFILE_TEXT.emailLabel}: {email.trim() || PROFILE_TEXT.notAvailable}
+          {t('profile.emailLabel')}: {email.trim() || t('common.notAvailable')}
         </Text>
         <Text style={styles.previewText}>
-          {PROFILE_TEXT.phoneLabel}: {phone.trim() || PROFILE_TEXT.notAvailable}
+          {t('profile.phoneLabel')}: {phone.trim() || t('common.notAvailable')}
         </Text>
         <Text style={styles.previewText}>
-          {PROFILE_TEXT.genderLabel}: {gender || PROFILE_TEXT.notAvailable}
+          {t('profile.genderLabel')}: {gender ? t(`profile.${gender}`) : t('common.notAvailable')}
         </Text>
       </View>
     </View>

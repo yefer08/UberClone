@@ -14,10 +14,17 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { setSelectedVehicle } from '../store/slices/rideSlice';
 
 /** Available vehicle categories. Order determines display order on screen. */
 const VEHICLES = ['Economico', 'XL', 'Premium'];
+
+const VEHICLE_TRANSLATION_KEYS = {
+  Economico: 'rideOptions.economico',
+  XL: 'rideOptions.xl',
+  Premium: 'rideOptions.premium',
+};
 
 /**
  * RideOptionsScreen component.
@@ -26,13 +33,19 @@ const VEHICLES = ['Economico', 'XL', 'Premium'];
  */
 function RideOptionsScreen() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   // distanceText and etaText come from the Distance Matrix API result
   const { distanceText, etaText, selectedVehicle } = useSelector(state => state.ride);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Choose your ride</Text>
-      <Text style={styles.subtitle}>Distance: {distanceText || 'N/A'} | ETA: {etaText || 'N/A'}</Text>
+      <Text style={styles.title}>{t('rideOptions.title')}</Text>
+      <Text style={styles.subtitle}>
+        {t('rideOptions.subtitle', {
+          distance: distanceText || t('common.notAvailable'),
+          eta: etaText || t('common.notAvailable'),
+        })}
+      </Text>
 
       {VEHICLES.map(vehicle => {
         const isSelected = selectedVehicle === vehicle;
@@ -44,9 +57,11 @@ function RideOptionsScreen() {
             onPress={() => dispatch(setSelectedVehicle(vehicle))}
           >
             <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
-              {vehicle}
+              {t(VEHICLE_TRANSLATION_KEYS[vehicle])}
             </Text>
-            <Text style={styles.optionPrice}>Estimated fare: ${mockFareByVehicle(vehicle)}</Text>
+            <Text style={styles.optionPrice}>
+              {t('rideOptions.estimatedFare', { fare: mockFareByVehicle(vehicle) })}
+            </Text>
           </TouchableOpacity>
         );
       })}

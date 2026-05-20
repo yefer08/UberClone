@@ -1,0 +1,58 @@
+{
+  "navigation": {
+    "home": "Uber Clone",
+    "rideOptions": "Ride Options",
+    "profile": "Profile"
+  },
+  "common": {
+    "notAvailable": "N/A",
+    "error": "Error",
+    "allow": "Allow",
+    "deny": "Deny"
+  },
+  "home": {
+    "title": "Where to?",
+    "searchPlaceholder": "Search destination...",
+    "gettingLocation": "Getting your location...",
+    "seeRideOptions": "See ride options",
+    "goToProfile": "Go to Profile",
+    "locationPermissionTitle": "Location permission",
+    "locationPermissionMessage": "This app needs access to your location to show your current position.",
+    "permissionDeniedTitle": "Permission denied",
+    "permissionDeniedMessage": "Location permission is required to use this feature.",
+    "destinationLoadError": "Could not load destination details. Please try again.",
+    "routeError": "Could not calculate the route. Please try again.",
+    "yourLocation": "Your location",
+    "destination": "Destination"
+  },
+  "profile": {
+    "title": "Profile",
+    "nameLabel": "Name",
+    "emailLabel": "Email",
+    "phoneLabel": "Phone",
+    "genderLabel": "Gender",
+    "saveButton": "Save Profile",
+    "validationTitle": "Validation",
+    "requiredFields": "All fields are required.",
+    "nameLimit": "Name must be 50 characters or less.",
+    "invalidEmail": "Enter a valid email address.",
+    "invalidPhone": "Phone must be numeric.",
+    "savedTitle": "Saved",
+    "savedMessage": "Profile updated successfully.",
+    "summaryTitle": "Saved profile preview",
+    "male": "Male",
+    "female": "Female",
+    "other": "Other",
+    "languageLabel": "Language",
+    "languageSpanish": "Spanish",
+    "languageEnglish": "English"
+  },
+  "rideOptions": {
+    "title": "Choose your ride",
+    "subtitle": "Distance: {{distance}} | ETA: {{eta}}",
+    "estimatedFare": "Estimated fare: ${{fare}}",
+    "economico": "Economy",
+    "xl": "XL",
+    "premium": "Premium"
+  }
+}

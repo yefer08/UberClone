@@ -1,0 +1,58 @@
+{
+  "navigation": {
+    "home": "Uber Clone",
+    "rideOptions": "Opciones de viaje",
+    "profile": "Perfil"
+  },
+  "common": {
+    "notAvailable": "N/D",
+    "error": "Error",
+    "allow": "Permitir",
+    "deny": "Denegar"
+  },
+  "home": {
+    "title": "¿A dónde vamos?",
+    "searchPlaceholder": "Buscar destino...",
+    "gettingLocation": "Obteniendo tu ubicación...",
+    "seeRideOptions": "Ver opciones de viaje",
+    "goToProfile": "Ir al perfil",
+    "locationPermissionTitle": "Permiso de ubicación",
+    "locationPermissionMessage": "Esta app necesita acceso a tu ubicación para mostrar tu posición actual.",
+    "permissionDeniedTitle": "Permiso denegado",
+    "permissionDeniedMessage": "El permiso de ubicación es obligatorio para usar esta función.",
+    "destinationLoadError": "No se pudieron cargar los detalles del destino. Intenta de nuevo.",
+    "routeError": "No se pudo calcular la ruta. Intenta de nuevo.",
+    "yourLocation": "Tu ubicación",
+    "destination": "Destino"
+  },
+  "profile": {
+    "title": "Perfil",
+    "nameLabel": "Nombre",
+    "emailLabel": "Correo",
+    "phoneLabel": "Teléfono",
+    "genderLabel": "Género",
+    "saveButton": "Guardar perfil",
+    "validationTitle": "Validación",
+    "requiredFields": "Todos los campos son obligatorios.",
+    "nameLimit": "El nombre debe tener máximo 50 caracteres.",
+    "invalidEmail": "Ingresa un correo válido.",
+    "invalidPhone": "El teléfono debe ser numérico.",
+    "savedTitle": "Guardado",
+    "savedMessage": "Perfil actualizado correctamente.",
+    "summaryTitle": "Vista previa del perfil guardado",
+    "male": "Masculino",
+    "female": "Femenino",
+    "other": "Otro",
+    "languageLabel": "Idioma",
+    "languageSpanish": "Español",
+    "languageEnglish": "Inglés"
+  },
+  "rideOptions": {
+    "title": "Elige tu viaje",
+    "subtitle": "Distancia: {{distance}} | ETA: {{eta}}",
+    "estimatedFare": "Tarifa estimada: ${{fare}}",
+    "economico": "Económico",
+    "xl": "XL",
+    "premium": "Premium"
+  }
+}
