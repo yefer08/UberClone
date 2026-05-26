@@ -9,6 +9,7 @@
  */
 import React from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 // Datos simulados (mock)
 const TRIPS = [
@@ -38,12 +39,12 @@ const TRIPS = [
 /**
  * Renderiza una tarjeta de viaje.
  */
-function TripCard({ trip }) {
+function TripCard({ trip, t }) {
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{trip.origin} → {trip.destination}</Text>
-      <Text style={styles.detail}>Fecha: {trip.date}</Text>
-      <Text style={styles.detail}>Costo: {trip.cost}</Text>
+      <Text style={styles.detail}>{t('tripHistory.date')}: {trip.date}</Text>
+      <Text style={styles.detail}>{t('tripHistory.cost')}: {trip.cost}</Text>
     </View>
   );
 }
@@ -52,14 +53,16 @@ function TripCard({ trip }) {
  * Pantalla principal del historial de viajes.
  */
 export default function TripHistoryScreen() {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Historial de viajes</Text>
+      <Text style={styles.header}>{t('tripHistory.title')}</Text>
       <FlatList
         data={TRIPS}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => <TripCard trip={item} />}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        renderItem={({ item }) => <TripCard trip={item} t={t} />}
+        contentContainerStyle={styles.listContent}
       />
     </View>
   );
@@ -95,5 +98,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     marginBottom: 2,
+  },
+  listContent: {
+    paddingBottom: 24,
   },
 });

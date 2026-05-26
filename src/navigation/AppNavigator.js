@@ -7,8 +7,7 @@
  *   - Home         → HomeScreen        (destination search + trip start)
  *   - RideOptions  → RideOptionsScreen  (vehicle selection + fare estimate)
  *   - Profile      → ProfileScreen      (user profile form)
- *
- * TODO: Extend with a Tab Navigator once Trip History and Payments are added.
+ *   - TripHistory  → TripHistoryScreen  (list of previous trips)
  */
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
@@ -17,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import HomeScreen from '../screens/HomeScreen';
 import RideOptionsScreen from '../screens/RideOptionsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import TripHistoryScreen from '../screens/TripHistoryScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -46,6 +46,11 @@ function AppNavigator() {
           name="Profile"
           component={ProfileScreen}
           options={{ title: t('navigation.profile') }}
+        />
+        <Stack.Screen
+          name="TripHistory"
+          component={TripHistoryScreen}
+          options={{ title: t('navigation.tripHistory') }}
         />
       </Stack.Navigator>
     </NavigationContainer>

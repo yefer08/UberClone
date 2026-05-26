@@ -8,8 +8,6 @@
  *   - Name must not exceed 50 characters
  *   - Email must match a basic format (x@x.x)
  *   - Phone must be numeric only
- *
- * TODO: Add bilingual ES/EN support.
  */
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -28,7 +26,7 @@ const GENDER_OPTIONS = [
  * Pre-fills fields with the current values stored in the Redux user slice.
  * On save, validates all fields and dispatches the updated profile.
  */
-function ProfileScreen() {
+function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
   const { t, i18n } = useTranslation();
   // Read current profile values from Redux to pre-fill the form
@@ -165,6 +163,13 @@ function ProfileScreen() {
         <Text style={styles.buttonText}>{t('profile.saveButton')}</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.historyButton}
+        onPress={() => navigation.navigate('TripHistory')}
+      >
+        <Text style={styles.historyButtonText}>{t('profile.viewTripHistory')}</Text>
+      </TouchableOpacity>
+
       <View style={styles.previewCard}>
         <Text style={styles.previewTitle}>{t('profile.summaryTitle')}</Text>
         <Text style={styles.previewText}>
@@ -245,6 +250,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  historyButton: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#111827',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  historyButtonText: {
+    color: '#111827',
+    fontWeight: '600',
+    fontSize: 15,
   },
   previewCard: {
     marginTop: 18,

@@ -27,6 +27,7 @@ import {
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import Config from 'react-native-config';
 import debounce from 'lodash.debounce';
 import Geolocation from 'react-native-geolocation-service';
 import MapView, { Marker, Polyline } from 'react-native-maps';
@@ -35,6 +36,7 @@ import { autocompletePlaces } from '../utils/autocompleteServices';
 import { getPlaceDetails } from '../utils/playDetailServices';
 import { getDistanceMatrix } from '../utils/distanceMatrixService';
 import { getDirections } from '../utils/directionsService';
+import { hasValidMapsApiKey } from '../utils/mapsKey';
 import {
   setDestination,
   setOrigin,
@@ -81,6 +83,7 @@ async function requestLocationPermission(t) {
 function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const hasMapsApiKey = hasValidMapsApiKey(Config.GOOGLE_MAPS_API_KEY);
 
   // Text currently shown in the search input
   const [query, setQuery] = useState('');
@@ -117,7 +120,12 @@ function HomeScreen({ navigation }) {
           });
         },
         error => console.warn('Geolocation error:', error.message),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 10000,
+          forceLocationManager: true,
+        },
       );
     })();
   }, [t]);
@@ -254,23 +262,30 @@ function HomeScreen({ navigation }) {
       <Text style={styles.title}>{t('home.title')}</Text>
 
       <View style={styles.mapCard}>
-        <MapView style={styles.map} region={mapRegion}>
-          {userLocation && (
-            <Marker
-              coordinate={{ latitude: userLocation.lat, longitude: userLocation.lng }}
-              title={t('home.yourLocation')}
-            />
-          )}
-          {selectedPlace && (
-            <Marker
-              coordinate={{ latitude: selectedPlace.lat, longitude: selectedPlace.lng }}
-              title={t('home.destination')}
-            />
-          )}
-          {routeCoords.length > 1 && (
-            <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
-          )}
-        </MapView>
+        {hasMapsApiKey ? (
+          <MapView style={styles.map} region={mapRegion}>
+            {userLocation && (
+              <Marker
+                coordinate={{ latitude: userLocation.lat, longitude: userLocation.lng }}
+                title={t('home.yourLocation')}
+              />
+            )}
+            {selectedPlace && (
+              <Marker
+                coordinate={{ latitude: selectedPlace.lat, longitude: selectedPlace.lng }}
+                title={t('home.destination')}
+              />
+            )}
+            {routeCoords.length > 1 && (
+              <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
+            )}
+          </MapView>
+        ) : (
+          <View style={styles.mapMissingKeyContainer}>
+            <Text style={styles.mapMissingKeyTitle}>{t('home.mapsKeyMissingTitle')}</Text>
+            <Text style={styles.mapMissingKeyText}>{t('home.mapsKeyMissingMessage')}</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.controlsCard}>
@@ -332,6 +347,13 @@ function HomeScreen({ navigation }) {
         >
           <Text style={styles.secondaryButtonText}>{t('home.goToProfile')}</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('TripHistory')}
+        >
+          <Text style={styles.secondaryButtonText}>{t('home.goToHistory')}</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -361,6 +383,24 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  mapMissingKeyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  mapMissingKeyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  mapMissingKeyText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#4B5563',
+    textAlign: 'center',
   },
   controlsCard: {
     flex: 1,
