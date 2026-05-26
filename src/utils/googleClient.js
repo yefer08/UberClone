@@ -1,22 +1,8 @@
 import axios from 'axios';
 import Config from 'react-native-config';
+import { hasValidMapsApiKey } from './mapsKey';
 
 const GOOGLE_BASE_URL = 'https://maps.googleapis.com';
-
-/**
- * Reads and validates the Google Maps API key from environment variables.
- * @returns {string} The API key.
- * @throws {Error} If the key is missing.
- */
-const getGoogleApiKey = () => {
-  const apiKey = Config.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      'Missing GOOGLE_MAPS_API_KEY. Add it to your .env file and rebuild the app.',
-    );
-  }
-  return apiKey;
-};
 
 /**
  * Removes undefined values from a params object.
@@ -36,7 +22,11 @@ const cleanParams = params =>
  * @returns {Promise<any>} Parsed response data
  */
 export const requestGoogle = async (endpoint, params = {}) => {
-  const key = getGoogleApiKey();
+  const key = Config.GOOGLE_MAPS_API_KEY;
+
+  if (!hasValidMapsApiKey(key)) {
+    throw new Error('Missing GOOGLE_MAPS_API_KEY. Set it in .env');
+  }
 
   const response = await axios.get(`${GOOGLE_BASE_URL}${endpoint}`, {
     params: {

@@ -15,6 +15,8 @@ import {
   View,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import Config from 'react-native-config';
 import debounce from 'lodash.debounce';
 import Geolocation from 'react-native-geolocation-service';
 import MapView, { Marker, Polyline } from 'react-native-maps';
@@ -24,6 +26,7 @@ import { autocompletePlaces } from '../utils/autocompleteServices';
 import { getPlaceDetails } from '../utils/playDetailServices';
 import { getDistanceMatrix } from '../utils/distanceMatrixService';
 import { getDirections } from '../utils/directionsService';
+import { hasValidMapsApiKey } from '../utils/mapsKey';
 import {
   setDestination,
   setOrigin,
@@ -33,6 +36,12 @@ import {
 
 const newSessionToken = () => Math.random().toString(36).slice(2);
 
+/**
+ * Requests ACCESS_FINE_LOCATION permission on Android at runtime.
+ * On iOS the permission is handled through Info.plist; this function
+ * always returns true for non-Android platforms.
+ * @returns {Promise<boolean>} True if permission was granted.
+ */
 async function requestLocationPermission() {
   if (Platform.OS !== 'android') {
     return true;
@@ -41,10 +50,10 @@ async function requestLocationPermission() {
   const granted = await PermissionsAndroid.request(
     PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     {
-      title: 'Location permission',
-      message: 'This app needs access to your location to show your current position.',
-      buttonPositive: 'Allow',
-      buttonNegative: 'Deny',
+      title: t('home.locationPermissionTitle'),
+      message: t('home.locationPermissionMessage'),
+      buttonPositive: t('common.allow'),
+      buttonNegative: t('common.deny'),
     },
   );
 
@@ -53,6 +62,8 @@ async function requestLocationPermission() {
 
 function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const hasMapsApiKey = hasValidMapsApiKey(Config.GOOGLE_MAPS_API_KEY);
 
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -68,9 +79,8 @@ function HomeScreen({ navigation }) {
   useEffect(() => {
     (async () => {
       const allowed = await requestLocationPermission();
-
       if (!allowed) {
-        Alert.alert('Permission denied', 'Location permission is required to use this feature.');
+        Alert.alert(t('home.permissionDeniedTitle'), t('home.permissionDeniedMessage'));
         return;
       }
 
@@ -82,10 +92,15 @@ function HomeScreen({ navigation }) {
           });
         },
         error => console.warn('Geolocation error:', error.message),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 10000,
+          forceLocationManager: true,
+        },
       );
     })();
-  }, []);
+  }, [t]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchSuggestions = useCallback(
@@ -157,7 +172,7 @@ function HomeScreen({ navigation }) {
       sessionTokenRef.current = newSessionToken();
     } catch (err) {
       console.warn('Place details error:', err.message);
-      Alert.alert('Error', 'Could not load destination details. Please try again.');
+      Alert.alert(t('common.error'), t('home.destinationLoadError'));
     }
   };
 
@@ -223,7 +238,7 @@ function HomeScreen({ navigation }) {
       navigation.navigate('RideOptions');
     } catch (err) {
       console.warn('Distance matrix error:', err.message);
-      Alert.alert('Error', 'Could not calculate the route. Please try again.');
+      Alert.alert(t('common.error'), t('home.routeError'));
     } finally {
       setLoadingTrip(false);
     }
@@ -247,30 +262,22 @@ function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Where to?</Text>
+      <Text style={styles.title}>{t('home.title')}</Text>
 
       <View style={styles.mapCard}>
-        <MapView ref={mapRef} style={styles.map} region={mapRegion}>
+        <MapView style={styles.map} region={mapRegion}>
           {userLocation && (
             <Marker
-              coordinate={{
-                latitude: userLocation.lat,
-                longitude: userLocation.lng,
-              }}
+              coordinate={{ latitude: userLocation.lat, longitude: userLocation.lng }}
               title="Your location"
             />
           )}
-
           {selectedPlace && (
             <Marker
-              coordinate={{
-                latitude: selectedPlace.lat,
-                longitude: selectedPlace.lng,
-              }}
+              coordinate={{ latitude: selectedPlace.lat, longitude: selectedPlace.lng }}
               title="Destination"
             />
           )}
-
           {routeCoords.length > 1 && (
             <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
           )}
@@ -281,7 +288,7 @@ function HomeScreen({ navigation }) {
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.input}
-            placeholder="Search destination..."
+            placeholder={t('home.searchPlaceholder')}
             placeholderTextColor="#9CA3AF"
             value={query}
             onChangeText={onChangeText}
@@ -316,7 +323,7 @@ function HomeScreen({ navigation }) {
         )}
 
         {!userLocation && (
-          <Text style={styles.locationNote}>Getting your location...</Text>
+          <Text style={styles.locationNote}>{t('home.gettingLocation')}</Text>
         )}
 
         <TouchableOpacity
@@ -327,7 +334,7 @@ function HomeScreen({ navigation }) {
           {loadingTrip ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.buttonText}>See ride options</Text>
+            <Text style={styles.buttonText}>{t('home.seeRideOptions')}</Text>
           )}
         </TouchableOpacity>
 
@@ -335,7 +342,14 @@ function HomeScreen({ navigation }) {
           style={styles.secondaryButton}
           onPress={() => navigation.navigate('Profile')}
         >
-          <Text style={styles.secondaryButtonText}>Go to Profile</Text>
+          <Text style={styles.secondaryButtonText}>{t('home.goToProfile')}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('TripHistory')}
+        >
+          <Text style={styles.secondaryButtonText}>{t('home.goToHistory')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -366,6 +380,24 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  mapMissingKeyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  mapMissingKeyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  mapMissingKeyText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: '#4B5563',
+    textAlign: 'center',
   },
   controlsCard: {
     flex: 1,

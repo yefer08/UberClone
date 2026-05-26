@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /*
 * Displays a list of trips (mock data) with origin, destination, date, and cost.
 * Navigable from HomeScreen and ProfileScreen.
@@ -7,6 +8,22 @@ import React from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 
 // Simulated data (mock)
+=======
+/**
+ * TripHistoryScreen
+ * Pantalla para mostrar el historial de viajes del usuario.
+ * Autor: [Nombre de tu compañera]
+ * Fecha: 20/05/2026
+ *
+ * Muestra una lista de viajes (mock data) con origen, destino, fecha y costo.
+ * Navegable desde HomeScreen y ProfileScreen.
+ */
+import React from 'react';
+import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+// Datos simulados (mock)
+>>>>>>> origin/develop
 const TRIPS = [
   {
     id: '1',
@@ -32,6 +49,7 @@ const TRIPS = [
 ];
 
 /**
+<<<<<<< HEAD
  * Render a travel card.
  */
 function TripCard({ trip }) {
@@ -40,11 +58,22 @@ function TripCard({ trip }) {
       <Text style={styles.title}>{trip.origin} → {trip.destination}</Text>
       <Text style={styles.detail}>Fecha: {trip.date}</Text>
       <Text style={styles.detail}>Costo: {trip.cost}</Text>
+=======
+ * Renderiza una tarjeta de viaje.
+ */
+function TripCard({ trip, t }) {
+  return (
+    <View style={styles.card}>
+      <Text style={styles.title}>{trip.origin} → {trip.destination}</Text>
+      <Text style={styles.detail}>{t('tripHistory.date')}: {trip.date}</Text>
+      <Text style={styles.detail}>{t('tripHistory.cost')}: {trip.cost}</Text>
+>>>>>>> origin/develop
     </View>
   );
 }
 
 /**
+<<<<<<< HEAD
  * Main screen for the trip history.
  */
 export default function TripHistoryScreen() {
@@ -56,6 +85,21 @@ export default function TripHistoryScreen() {
         keyExtractor={item => item.id}
         renderItem={({ item }) => <TripCard trip={item} />}
         contentContainerStyle={{ paddingBottom: 24 }}
+=======
+ * Pantalla principal del historial de viajes.
+ */
+export default function TripHistoryScreen() {
+  const { t } = useTranslation();
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.header}>{t('tripHistory.title')}</Text>
+      <FlatList
+        data={TRIPS}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => <TripCard trip={item} t={t} />}
+        contentContainerStyle={styles.listContent}
+>>>>>>> origin/develop
       />
     </View>
   );
@@ -92,4 +136,11 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 2,
   },
+<<<<<<< HEAD
 });
+=======
+  listContent: {
+    paddingBottom: 24,
+  },
+});
+>>>>>>> origin/develop

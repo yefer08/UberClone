@@ -8,18 +8,17 @@
  *   - Name must not exceed 50 characters
  *   - Email must match a basic format (x@x.x)
  *   - Phone must be numeric only
- *
- * TODO: Add bilingual ES/EN support.
  */
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { setUserProfile } from '../store/slices/userSlice';
 
 const GENDER_OPTIONS = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
-  { label: 'Other', value: 'other' },
+  { value: 'male', translationKey: 'profile.male' },
+  { value: 'female', translationKey: 'profile.female' },
+  { value: 'other', translationKey: 'profile.other' },
 ];
 
 /**
@@ -27,8 +26,9 @@ const GENDER_OPTIONS = [
  * Pre-fills fields with the current values stored in the Redux user slice.
  * On save, validates all fields and dispatches the updated profile.
  */
-function ProfileScreen() {
+function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
+  const { t, i18n } = useTranslation();
   // Read current profile values from Redux to pre-fill the form
   const user = useSelector(state => state.user);
 
@@ -43,22 +43,22 @@ function ProfileScreen() {
    */
   const onSave = () => {
     if (!name.trim() || !email.trim() || !phone.trim() || !gender) {
-      Alert.alert('Validation', 'All fields are required.');
+      Alert.alert(t('profile.validationTitle'), t('profile.requiredFields'));
       return;
     }
 
     if (name.length > 50) {
-      Alert.alert('Validation', 'Name must be 50 characters or less.');
+      Alert.alert(t('profile.validationTitle'), t('profile.nameLimit'));
       return;
     }
 
     if (!/^\S+@\S+\.\S+$/.test(email)) {
-      Alert.alert('Validation', 'Enter a valid email address.');
+      Alert.alert(t('profile.validationTitle'), t('profile.invalidEmail'));
       return;
     }
 
     if (!/^\d+$/.test(phone)) {
-      Alert.alert('Validation', 'Phone must be numeric.');
+      Alert.alert(t('profile.validationTitle'), t('profile.invalidPhone'));
       return;
     }
 
@@ -71,14 +71,14 @@ function ProfileScreen() {
       }),
     );
 
-    Alert.alert('Saved', 'Profile updated successfully.');
+    Alert.alert(t('profile.savedTitle'), t('profile.savedMessage'));
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
+      <Text style={styles.title}>{t('profile.title')}</Text>
 
-      <Text style={styles.label}>Name</Text>
+      <Text style={styles.label}>{t('profile.nameLabel')}</Text>
       <TextInput
         style={styles.input}
         value={name}
@@ -86,7 +86,7 @@ function ProfileScreen() {
         placeholder="John Doe"
       />
 
-      <Text style={styles.label}>Email</Text>
+      <Text style={styles.label}>{t('profile.emailLabel')}</Text>
       <TextInput
         style={styles.input}
         value={email}
@@ -96,7 +96,7 @@ function ProfileScreen() {
         placeholder="john@email.com"
       />
 
-      <Text style={styles.label}>Phone</Text>
+      <Text style={styles.label}>{t('profile.phoneLabel')}</Text>
       <TextInput
         style={styles.input}
         value={phone}
@@ -105,7 +105,7 @@ function ProfileScreen() {
         placeholder="5512345678"
       />
 
-      <Text style={styles.label}>Gender</Text>
+      <Text style={styles.label}>{t('profile.genderLabel')}</Text>
       <View style={styles.genderRow}>
         {GENDER_OPTIONS.map(option => {
           const isSelected = option.value === gender;
@@ -116,16 +116,75 @@ function ProfileScreen() {
               onPress={() => setGender(option.value)}
             >
               <Text style={[styles.genderChipText, isSelected && styles.genderChipTextSelected]}>
-                {option.label}
+                {t(option.translationKey)}
               </Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
+      <Text style={styles.label}>{t('profile.languageLabel')}</Text>
+      <View style={styles.genderRow}>
+        <TouchableOpacity
+          style={[
+            styles.genderChip,
+            i18n.language.startsWith('es') && styles.genderChipSelected,
+          ]}
+          onPress={() => i18n.changeLanguage('es')}
+        >
+          <Text
+            style={[
+              styles.genderChipText,
+              i18n.language.startsWith('es') && styles.genderChipTextSelected,
+            ]}
+          >
+            {t('profile.languageSpanish')}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.genderChip,
+            i18n.language.startsWith('en') && styles.genderChipSelected,
+          ]}
+          onPress={() => i18n.changeLanguage('en')}
+        >
+          <Text
+            style={[
+              styles.genderChipText,
+              i18n.language.startsWith('en') && styles.genderChipTextSelected,
+            ]}
+          >
+            {t('profile.languageEnglish')}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.button} onPress={onSave}>
-        <Text style={styles.buttonText}>Save Profile</Text>
+        <Text style={styles.buttonText}>{t('profile.saveButton')}</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.historyButton}
+        onPress={() => navigation.navigate('TripHistory')}
+      >
+        <Text style={styles.historyButtonText}>{t('profile.viewTripHistory')}</Text>
+      </TouchableOpacity>
+
+      <View style={styles.previewCard}>
+        <Text style={styles.previewTitle}>{t('profile.summaryTitle')}</Text>
+        <Text style={styles.previewText}>
+          {t('profile.nameLabel')}: {name.trim() || t('common.notAvailable')}
+        </Text>
+        <Text style={styles.previewText}>
+          {t('profile.emailLabel')}: {email.trim() || t('common.notAvailable')}
+        </Text>
+        <Text style={styles.previewText}>
+          {t('profile.phoneLabel')}: {phone.trim() || t('common.notAvailable')}
+        </Text>
+        <Text style={styles.previewText}>
+          {t('profile.genderLabel')}: {gender ? t(`profile.${gender}`) : t('common.notAvailable')}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -191,6 +250,38 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  historyButton: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#111827',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  historyButtonText: {
+    color: '#111827',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  previewCard: {
+    marginTop: 18,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 14,
+  },
+  previewTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  previewText: {
+    fontSize: 13,
+    color: '#374151',
+    marginBottom: 4,
   },
 });
 
