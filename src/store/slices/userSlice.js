@@ -16,6 +16,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
+  photo: '',
   name: '',
   email: '',
   phone: '',
@@ -27,12 +28,14 @@ const userSlice = createSlice({
   initialState,
   reducers: {
     setUserProfile: (state, action) => {
+      state.photo = action.payload.photo;
       state.name = action.payload.name;
       state.email = action.payload.email;
       state.phone = action.payload.phone;
       state.gender = action.payload.gender;
     },
     clearUserProfile: state => {
+      state.photo = '';
       state.name = '';
       state.email = '';
       state.phone = '';

@@ -37,15 +37,13 @@ import { getPlaceDetails } from '../utils/playDetailServices';
 import { getDistanceMatrix } from '../utils/distanceMatrixService';
 import { getDirections } from '../utils/directionsService';
 import { hasValidMapsApiKey } from '../utils/mapsKey';
-import { appendTripToStorage } from '../utils/tripHistoryStorage';
-import { appendTripToFirebase } from '../utils/firebaseTripService';
 import {
   setDestination,
   setOrigin,
+  setTripPlaceLabels,
   setRouteCoords as setRouteCoordsInStore,
   setTripMetrics,
 } from '../store/slices/rideSlice';
-import { addTrip } from '../store/slices/tripHistorySlice';
 
 /**
  * Generates a random session token to group an autocomplete + place details
@@ -227,6 +225,12 @@ function HomeScreen({ navigation }) {
       const metrics = await getDistanceMatrix(userLocation, selectedPlace);
       dispatch(setOrigin(userLocation));
       dispatch(setDestination(selectedPlace));
+      dispatch(
+        setTripPlaceLabels({
+          originLabel: t('home.yourLocation'),
+          destinationLabel: query.trim(),
+        }),
+      );
       dispatch(setRouteCoordsInStore(routeCoords));
       dispatch(
         setTripMetrics({
@@ -234,20 +238,6 @@ function HomeScreen({ navigation }) {
           etaText: metrics.duration.text,
         }),
       );
-
-      const trip = {
-        id: Date.now().toString(),
-        origin: `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}`,
-        destination: query,
-        date: new Date().toISOString().slice(0, 10),
-        distance: metrics.distance.text,
-        eta: metrics.duration.text,
-        cost: `$${estimateEconomyFare(metrics.distance.text)}`,
-      };
-
-      dispatch(addTrip(trip));
-      await appendTripToStorage(trip);
-      await appendTripToFirebase(trip);
 
       navigation.navigate('RideOptions');
     } catch (err) {
@@ -260,21 +250,6 @@ function HomeScreen({ navigation }) {
 
   // Enable the CTA only when both origin (GPS) and destination (selected place) are ready
   const canStartTrip = !!userLocation && !!selectedPlace && !loadingTrip;
-
-  const estimateEconomyFare = distanceText => {
-    const normalized = (distanceText || '').replace(',', '.');
-    const parsedValue = parseFloat(normalized);
-
-    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
-      return (40 + 5 * 9).toFixed(2);
-    }
-
-    const km = normalized.includes('m') && !normalized.includes('km')
-      ? parsedValue / 1000
-      : parsedValue;
-
-    return (40 + km * 9).toFixed(2);
-  };
 
   const mapRegion = userLocation
     ? {
@@ -378,14 +353,22 @@ function HomeScreen({ navigation }) {
           style={styles.secondaryButton}
           onPress={() => navigation.navigate('Profile')}
         >
-          <Text style={styles.secondaryButtonText}>{t('home.goToProfile')}</Text>
+          <View style={styles.navButtonContent}>
+            <Text style={styles.navButtonIcon}>◉</Text>
+            <Text style={styles.secondaryButtonText}>{t('home.goToProfile')}</Text>
+            <Text style={styles.navButtonChevron}>›</Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.secondaryButton}
+          style={[styles.secondaryButton, styles.secondaryButtonAlt]}
           onPress={() => navigation.navigate('TripHistory')}
         >
-          <Text style={styles.secondaryButtonText}>{t('home.goToHistory')}</Text>
+          <View style={styles.navButtonContent}>
+            <Text style={styles.navButtonIcon}>☰</Text>
+            <Text style={styles.secondaryButtonText}>{t('home.goToHistory')}</Text>
+            <Text style={styles.navButtonChevron}>›</Text>
+          </View>
         </TouchableOpacity>
       </View>
     </View>
@@ -505,16 +488,47 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     borderWidth: 1,
-    borderColor: '#111827',
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderColor: '#C7D2FE',
+    borderRadius: 14,
+    paddingVertical: 13,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 10,
+    backgroundColor: '#EEF2FF',
+    shadowColor: '#3730A3',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  secondaryButtonAlt: {
+    borderColor: '#A7F3D0',
+    backgroundColor: '#ECFDF5',
   },
   secondaryButtonText: {
-    color: '#111827',
-    fontWeight: '600',
+    color: '#0F172A',
+    fontWeight: '700',
     fontSize: 15,
+    letterSpacing: 0.2,
+    flex: 1,
+  },
+  navButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    width: '100%',
+  },
+  navButtonIcon: {
+    width: 24,
+    fontSize: 16,
+    color: '#1E293B',
+    marginRight: 8,
+    textAlign: 'center',
+  },
+  navButtonChevron: {
+    fontSize: 22,
+    lineHeight: 22,
+    color: '#64748B',
+    marginLeft: 8,
   },
 });
 

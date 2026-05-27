@@ -19,12 +19,18 @@ import { isFirebaseConfigured, loadTripsFromFirebase } from '../utils/firebaseTr
  * Renderiza una tarjeta de viaje.
  */
 function TripCard({ trip, t }) {
+  const paymentLabel = trip.paymentMethod
+    ? t(`rideOptions.paymentMethods.${trip.paymentMethod}`)
+    : t('common.notAvailable');
+
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{trip.origin} → {trip.destination}</Text>
       <Text style={styles.detail}>{t('tripHistory.date')}: {trip.date}</Text>
       <Text style={styles.detail}>{t('rideOptions.subtitle', { distance: trip.distance, eta: trip.eta })}</Text>
       <Text style={styles.detail}>{t('tripHistory.cost')}: {trip.cost}</Text>
+      <Text style={styles.detail}>{t('tripHistory.status')}: {t(`rideOptions.status.${trip.status || 'idle'}`)}</Text>
+      <Text style={styles.detail}>{t('tripHistory.paymentMethod')}: {paymentLabel}</Text>
     </View>
   );
 }
@@ -36,6 +42,7 @@ export default function TripHistoryScreen() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const trips = useSelector(state => state.tripHistory.trips);
+  const completedTrips = trips.filter(trip => ['completed', 'paid'].includes(trip.status));
 
   useEffect(() => {
     (async () => {
@@ -55,11 +62,11 @@ export default function TripHistoryScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>{t('tripHistory.title')}</Text>
-      {trips.length === 0 ? (
+      {completedTrips.length === 0 ? (
         <Text style={styles.emptyText}>{t('tripHistory.empty')}</Text>
       ) : (
         <FlatList
-          data={trips}
+          data={completedTrips}
           keyExtractor={item => item.id}
           renderItem={({ item }) => <TripCard trip={item} t={t} />}
           contentContainerStyle={styles.listContent}

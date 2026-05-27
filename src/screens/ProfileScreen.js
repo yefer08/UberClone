@@ -10,12 +10,14 @@
  *   - Phone must be numeric only
  */
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { Picker } from '@react-native-picker/picker';
 import { setUserProfile } from '../store/slices/userSlice';
 
 const GENDER_OPTIONS = [
+  { value: '', translationKey: 'profile.genderPlaceholder' },
   { value: 'male', translationKey: 'profile.male' },
   { value: 'female', translationKey: 'profile.female' },
   { value: 'other', translationKey: 'profile.other' },
@@ -32,18 +34,26 @@ function ProfileScreen({ navigation }) {
   // Read current profile values from Redux to pre-fill the form
   const user = useSelector(state => state.user);
 
+  const [photo, setPhoto] = useState(user.photo);
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [phone, setPhone] = useState(user.phone);
   const [gender, setGender] = useState(user.gender);
+  const hasValidPhoto = /^https?:\/\//i.test(photo.trim());
+  const avatarInitial = (name.trim().charAt(0) || '?').toUpperCase();
 
   /**
    * Validates all form fields and dispatches the updated profile to Redux.
    * Shows an Alert for the first validation error found.
    */
   const onSave = () => {
-    if (!name.trim() || !email.trim() || !phone.trim() || !gender) {
+    if (!photo.trim() || !name.trim() || !email.trim() || !phone.trim() || !gender) {
       Alert.alert(t('profile.validationTitle'), t('profile.requiredFields'));
+      return;
+    }
+
+    if (!/^https?:\/\//i.test(photo.trim())) {
+      Alert.alert(t('profile.validationTitle'), t('profile.invalidPhoto'));
       return;
     }
 
@@ -64,6 +74,7 @@ function ProfileScreen({ navigation }) {
 
     dispatch(
       setUserProfile({
+        photo: photo.trim(),
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim(),
@@ -77,6 +88,27 @@ function ProfileScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{t('profile.title')}</Text>
+
+      <Text style={styles.label}>{t('profile.photoLabel')}</Text>
+      <View style={styles.photoSection}>
+        <View style={styles.photoOuterRing}>
+          <View style={styles.photoInnerCircle}>
+            {hasValidPhoto ? (
+              <Image source={{ uri: photo.trim() }} style={styles.photoPreview} />
+            ) : (
+              <Text style={styles.photoFallbackText}>{avatarInitial}</Text>
+            )}
+          </View>
+        </View>
+      </View>
+
+      <TextInput
+        style={[styles.input, styles.photoInput]}
+        value={photo}
+        onChangeText={setPhoto}
+        autoCapitalize="none"
+        placeholder={t('profile.photoPlaceholder')}
+      />
 
       <Text style={styles.label}>{t('profile.nameLabel')}</Text>
       <TextInput
@@ -106,21 +138,16 @@ function ProfileScreen({ navigation }) {
       />
 
       <Text style={styles.label}>{t('profile.genderLabel')}</Text>
-      <View style={styles.genderRow}>
-        {GENDER_OPTIONS.map(option => {
-          const isSelected = option.value === gender;
-          return (
-            <TouchableOpacity
-              key={option.value}
-              style={[styles.genderChip, isSelected && styles.genderChipSelected]}
-              onPress={() => setGender(option.value)}
-            >
-              <Text style={[styles.genderChipText, isSelected && styles.genderChipTextSelected]}>
-                {t(option.translationKey)}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.pickerWrapper}>
+        <Picker selectedValue={gender} onValueChange={value => setGender(value)}>
+          {GENDER_OPTIONS.map(option => (
+            <Picker.Item
+              key={option.translationKey}
+              label={t(option.translationKey)}
+              value={option.value}
+            />
+          ))}
+        </Picker>
       </View>
 
       <Text style={styles.label}>{t('profile.languageLabel')}</Text>
@@ -173,6 +200,9 @@ function ProfileScreen({ navigation }) {
       <View style={styles.previewCard}>
         <Text style={styles.previewTitle}>{t('profile.summaryTitle')}</Text>
         <Text style={styles.previewText}>
+          {t('profile.photoLabel')}: {photo.trim() || t('common.notAvailable')}
+        </Text>
+        <Text style={styles.previewText}>
           {t('profile.nameLabel')}: {name.trim() || t('common.notAvailable')}
         </Text>
         <Text style={styles.previewText}>
@@ -213,6 +243,48 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  photoSection: {
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  photoOuterRing: {
+    width: 126,
+    height: 126,
+    borderRadius: 63,
+    padding: 4,
+    backgroundColor: '#E0E7FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  photoInnerCircle: {
+    flex: 1,
+    borderRadius: 60,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  photoPreview: {
+    width: 118,
+    height: 118,
+    borderRadius: 59,
+  },
+  photoFallbackText: {
+    fontSize: 44,
+    fontWeight: '700',
+    color: '#3730A3',
+  },
+  photoInput: {
+    marginTop: 2,
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 6,
   },
   genderRow: {
     flexDirection: 'row',

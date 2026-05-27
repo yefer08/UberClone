@@ -31,6 +31,8 @@
   },
   "profile": {
     "title": "Profile",
+    "photoLabel": "Photo",
+    "photoPlaceholder": "https://.../photo.jpg",
     "nameLabel": "Name",
     "emailLabel": "Email",
     "phoneLabel": "Phone",
@@ -38,6 +40,7 @@
     "saveButton": "Save Profile",
     "validationTitle": "Validation",
     "requiredFields": "All fields are required.",
+    "invalidPhoto": "Enter a valid photo URL (http/https).",
     "nameLimit": "Name must be 50 characters or less.",
     "invalidEmail": "Enter a valid email address.",
     "invalidPhone": "Phone must be numeric.",
@@ -47,6 +50,7 @@
     "male": "Male",
     "female": "Female",
     "other": "Other",
+    "genderPlaceholder": "Select gender",
     "languageLabel": "Language",
     "languageSpanish": "Spanish",
     "languageEnglish": "English",
@@ -56,6 +60,8 @@
     "title": "Trip History",
     "date": "Date",
     "cost": "Cost",
+    "status": "Status",
+    "paymentMethod": "Payment",
     "empty": "You do not have any trips yet."
   },
   "rideOptions": {
@@ -64,6 +70,44 @@
     "estimatedFare": "Estimated fare: ${{fare}}",
     "economico": "Economy",
     "xl": "XL",
-    "premium": "Premium"
+    "premium": "Premium",
+    "confirmRequest": "Confirm request",
+    "cancelRequest": "Cancel request",
+    "requestStatusLabel": "Request status",
+    "requestCreatedTitle": "Request created",
+    "requestCreatedMessage": "Your ride request was recorded.",
+    "requestCancelledTitle": "Request cancelled",
+    "requestCancelledMessage": "Your request was cancelled.",
+    "driverMarkerTitle": "Assigned driver",
+    "driverMarkerDescription": "Estimated arrival in {{eta}} min",
+    "driverEta": "Driver in {{eta}} min",
+    "paymentTitle": "Trip payment",
+    "paymentSubtitle": "Select your payment method to complete the trip.",
+    "gatewayMissingUrl": "Missing payment URL in .env configuration.",
+    "payNow": "Pay now",
+    "paymentSuccessTitle": "Payment successful",
+    "paymentSuccessMessage": "Your trip has been paid successfully.",
+    "invalidCardNumber": "Card number must contain 16 digits.",
+    "invalidCardExpiry": "Expiry must use MM/YY format.",
+    "invalidCardCvc": "CVC must contain 3 or 4 digits.",
+    "cardNumberPlaceholder": "Card number (16 digits)",
+    "cardExpiryPlaceholder": "MM/YY",
+    "cardCvcPlaceholder": "CVC",
+    "paymentMethods": {
+      "pending": "Pending",
+      "card": "Card",
+      "cash": "Cash",
+      "stripe": "Stripe",
+      "mercadopago": "Mercado Pago"
+    },
+    "status": {
+      "idle": "No request",
+      "requested": "Requested",
+      "driver_arriving": "Driver on the way",
+      "in_progress": "Trip in progress",
+      "completed": "Trip completed",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    }
   }
 }

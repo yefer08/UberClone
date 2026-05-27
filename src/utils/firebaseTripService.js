@@ -19,6 +19,11 @@ function buildCollectionUrl() {
   return `${FIRESTORE_BASE_URL}/projects/${projectId}/databases/(default)/documents/trips?key=${apiKey}`;
 }
 
+function buildDocumentUrl(localId) {
+  const { projectId, apiKey } = getFirestoreConfig();
+  return `${FIRESTORE_BASE_URL}/projects/${projectId}/databases/(default)/documents/trips/${encodeURIComponent(localId)}?key=${apiKey}`;
+}
+
 function serializeTrip(trip) {
   return {
     fields: {
@@ -29,6 +34,9 @@ function serializeTrip(trip) {
       distance: { stringValue: String(trip.distance || '') },
       eta: { stringValue: String(trip.eta || '') },
       cost: { stringValue: String(trip.cost || '') },
+      vehicle: { stringValue: String(trip.vehicle || '') },
+      status: { stringValue: String(trip.status || 'idle') },
+      paymentMethod: { stringValue: String(trip.paymentMethod || 'pending') },
       createdAt: { integerValue: String(Date.now()) },
     },
   };
@@ -46,6 +54,9 @@ function mapDocumentToTrip(document) {
     distance: fields.distance?.stringValue || '',
     eta: fields.eta?.stringValue || '',
     cost: fields.cost?.stringValue || '',
+    vehicle: fields.vehicle?.stringValue || '',
+    status: fields.status?.stringValue || 'idle',
+    paymentMethod: fields.paymentMethod?.stringValue || 'pending',
     createdAt: Number(fields.createdAt?.integerValue || 0),
   };
 }
@@ -56,8 +67,8 @@ export async function appendTripToFirebase(trip) {
   }
 
   try {
-    const response = await fetch(buildCollectionUrl(), {
-      method: 'POST',
+    const response = await fetch(buildDocumentUrl(trip.id), {
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -70,6 +81,50 @@ export async function appendTripToFirebase(trip) {
     }
   } catch (error) {
     console.warn('Firebase append trip exception:', error.message);
+  }
+}
+
+function serializeTripChanges(changes) {
+  const fields = {};
+
+  if (typeof changes.status !== 'undefined') {
+    fields.status = { stringValue: String(changes.status || 'idle') };
+  }
+  if (typeof changes.paymentMethod !== 'undefined') {
+    fields.paymentMethod = { stringValue: String(changes.paymentMethod || 'pending') };
+  }
+  if (typeof changes.vehicle !== 'undefined') {
+    fields.vehicle = { stringValue: String(changes.vehicle || '') };
+  }
+
+  return { fields };
+}
+
+export async function updateTripInFirebase(localId, changes) {
+  if (!isFirebaseConfigured() || !localId) {
+    return;
+  }
+
+  const payload = serializeTripChanges(changes);
+  if (!Object.keys(payload.fields).length) {
+    return;
+  }
+
+  try {
+    const response = await fetch(buildDocumentUrl(localId), {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.warn('Firebase update trip error:', errorBody);
+    }
+  } catch (error) {
+    console.warn('Firebase update trip exception:', error.message);
   }
 }
 

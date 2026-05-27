@@ -14,11 +14,23 @@ const tripHistorySlice = createSlice({
     addTrip: (state, action) => {
       state.trips = [action.payload, ...state.trips].slice(0, 50);
     },
+    updateTripById: (state, action) => {
+      const { id, changes } = action.payload || {};
+      const index = state.trips.findIndex(trip => trip.id === id);
+      if (index === -1) {
+        return;
+      }
+
+      state.trips[index] = {
+        ...state.trips[index],
+        ...changes,
+      };
+    },
     clearTrips: state => {
       state.trips = [];
     },
   },
 });
 
-export const { setTrips, addTrip, clearTrips } = tripHistorySlice.actions;
+export const { setTrips, addTrip, updateTripById, clearTrips } = tripHistorySlice.actions;
 export default tripHistorySlice.reducer;

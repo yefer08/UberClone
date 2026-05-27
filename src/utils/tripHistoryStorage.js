@@ -26,3 +26,23 @@ export async function appendTripToStorage(trip) {
     console.warn('Trip history save error:', error.message);
   }
 }
+
+export async function updateTripInStorage(id, changes) {
+  const current = await loadTripsFromStorage();
+  const next = current.map(trip => {
+    if (trip.id !== id) {
+      return trip;
+    }
+
+    return {
+      ...trip,
+      ...changes,
+    };
+  });
+
+  try {
+    await AsyncStorage.setItem(TRIP_HISTORY_KEY, JSON.stringify(next));
+  } catch (error) {
+    console.warn('Trip history update error:', error.message);
+  }
+}

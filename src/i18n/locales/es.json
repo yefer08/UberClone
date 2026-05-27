@@ -31,6 +31,8 @@
   },
   "profile": {
     "title": "Perfil",
+    "photoLabel": "Foto",
+    "photoPlaceholder": "https://.../foto.jpg",
     "nameLabel": "Nombre",
     "emailLabel": "Correo",
     "phoneLabel": "Teléfono",
@@ -38,6 +40,7 @@
     "saveButton": "Guardar perfil",
     "validationTitle": "Validación",
     "requiredFields": "Todos los campos son obligatorios.",
+    "invalidPhoto": "Ingresa una URL valida para la foto (http/https).",
     "nameLimit": "El nombre debe tener máximo 50 caracteres.",
     "invalidEmail": "Ingresa un correo válido.",
     "invalidPhone": "El teléfono debe ser numérico.",
@@ -47,6 +50,7 @@
     "male": "Masculino",
     "female": "Femenino",
     "other": "Otro",
+    "genderPlaceholder": "Selecciona género",
     "languageLabel": "Idioma",
     "languageSpanish": "Español",
     "languageEnglish": "Inglés",
@@ -56,6 +60,8 @@
     "title": "Historial de viajes",
     "date": "Fecha",
     "cost": "Costo",
+    "status": "Estado",
+    "paymentMethod": "Pago",
     "empty": "Aun no tienes viajes registrados."
   },
   "rideOptions": {
@@ -64,6 +70,44 @@
     "estimatedFare": "Tarifa estimada: ${{fare}}",
     "economico": "Económico",
     "xl": "XL",
-    "premium": "Premium"
+    "premium": "Premium",
+    "confirmRequest": "Confirmar solicitud",
+    "cancelRequest": "Cancelar solicitud",
+    "requestStatusLabel": "Estado de la solicitud",
+    "requestCreatedTitle": "Solicitud creada",
+    "requestCreatedMessage": "Tu solicitud de viaje fue registrada.",
+    "requestCancelledTitle": "Solicitud cancelada",
+    "requestCancelledMessage": "Tu solicitud fue cancelada.",
+    "driverMarkerTitle": "Conductor asignado",
+    "driverMarkerDescription": "Llegada aproximada en {{eta}} min",
+    "driverEta": "Conductor a {{eta}} min",
+    "paymentTitle": "Pago del viaje",
+    "paymentSubtitle": "Selecciona tu metodo de pago para finalizar.",
+    "gatewayMissingUrl": "Falta configurar la URL de pago en .env.",
+    "payNow": "Pagar ahora",
+    "paymentSuccessTitle": "Pago exitoso",
+    "paymentSuccessMessage": "Tu viaje ha sido pagado correctamente.",
+    "invalidCardNumber": "El numero de tarjeta debe tener 16 digitos.",
+    "invalidCardExpiry": "La fecha debe tener formato MM/AA.",
+    "invalidCardCvc": "El CVC debe tener 3 o 4 digitos.",
+    "cardNumberPlaceholder": "Numero de tarjeta (16 digitos)",
+    "cardExpiryPlaceholder": "MM/AA",
+    "cardCvcPlaceholder": "CVC",
+    "paymentMethods": {
+      "pending": "Pendiente",
+      "card": "Tarjeta",
+      "cash": "Efectivo",
+      "stripe": "Stripe",
+      "mercadopago": "Mercado Pago"
+    },
+    "status": {
+      "idle": "Sin solicitud",
+      "requested": "Solicitado",
+      "driver_arriving": "Conductor en camino",
+      "in_progress": "Viaje en curso",
+      "completed": "Viaje finalizado",
+      "paid": "Pagado",
+      "cancelled": "Cancelado"
+    }
   }
 }

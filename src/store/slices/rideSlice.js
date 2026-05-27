@@ -24,10 +24,13 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   origin: null,
   destination: null,
+  originLabel: '',
+  destinationLabel: '',
   routeCoords: [],
   distanceText: '',
   etaText: '',
   selectedVehicle: 'Economico',
+  requestStatus: 'idle',
 };
 
 const rideSlice = createSlice({
@@ -40,6 +43,10 @@ const rideSlice = createSlice({
     setDestination: (state, action) => {
       state.destination = action.payload;
     },
+    setTripPlaceLabels: (state, action) => {
+      state.originLabel = action.payload?.originLabel || '';
+      state.destinationLabel = action.payload?.destinationLabel || '';
+    },
     setRouteCoords: (state, action) => {
       state.routeCoords = action.payload;
     },
@@ -50,13 +57,19 @@ const rideSlice = createSlice({
     setSelectedVehicle: (state, action) => {
       state.selectedVehicle = action.payload;
     },
+    setRideRequestStatus: (state, action) => {
+      state.requestStatus = action.payload;
+    },
     resetRide: state => {
       state.origin = null;
       state.destination = null;
+      state.originLabel = '';
+      state.destinationLabel = '';
       state.routeCoords = [];
       state.distanceText = '';
       state.etaText = '';
       state.selectedVehicle = 'Economico';
+      state.requestStatus = 'idle';
     },
   },
 });
@@ -64,9 +77,11 @@ const rideSlice = createSlice({
 export const {
   setOrigin,
   setDestination,
+  setTripPlaceLabels,
   setRouteCoords,
   setTripMetrics,
   setSelectedVehicle,
+  setRideRequestStatus,
   resetRide,
 } = rideSlice.actions;
 
