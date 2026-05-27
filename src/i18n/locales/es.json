@@ -55,7 +55,10 @@
   "tripHistory": {
     "title": "Historial de viajes",
     "date": "Fecha",
-    "cost": "Costo"
+    "cost": "Costo",
+    "emptyHistory": "Aún no hay viajes. Solicita un viaje para ver tu historial.",
+    "completeProfileMessage": "Guarda tu perfil para ver el historial de viajes.",
+    "loadingHistory": "Cargando tu historial de viajes..."
   },
   "rideOptions": {
     "title": "Elige tu viaje",
@@ -63,6 +66,12 @@
     "estimatedFare": "Tarifa estimada: ${{fare}}",
     "economico": "Económico",
     "xl": "XL",
-    "premium": "Premium"
+    "premium": "Premium",
+    "confirmRide": "Confirmar viaje",
+    "savingRide": "Guardando viaje...",
+    "tripSavedTitle": "Viaje guardado",
+    "tripSavedMessage": "Tu viaje se guardó en el historial correctamente.",
+    "tripSaveError": "No se pudo guardar el viaje. Intenta de nuevo.",
+    "completeProfileBeforeSave": "Guarda tu perfil antes de guardar viajes."
   }
 }

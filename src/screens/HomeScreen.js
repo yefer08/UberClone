@@ -164,6 +164,7 @@ function HomeScreen({ navigation }) {
       const destinationCoords = {
         lat: place.geometry.location.lat,
         lng: place.geometry.location.lng,
+        address: item.description,
       };
 
       setSelectedPlace(destinationCoords);

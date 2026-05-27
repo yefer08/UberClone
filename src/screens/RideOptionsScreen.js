@@ -9,14 +9,15 @@
  *   - XL        → $140.00
  *   - Premium   → $220.00
  */
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import Config from 'react-native-config';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { setSelectedVehicle } from '../store/slices/rideSlice';
 import { hasValidMapsApiKey } from '../utils/mapsKey';
+import { saveRideForUser } from '../firebase/firestore';
 
 /** Available vehicle categories. Order determines display order on screen. */
 const VEHICLES = ['Economico', 'XL', 'Premium'];
@@ -34,7 +35,9 @@ const VEHICLE_TRANSLATION_KEYS = {
  */
 function RideOptionsScreen() {
   const dispatch = useDispatch();
+  const user = useSelector(state => state.user);
   const { t } = useTranslation();
+  const [savingRide, setSavingRide] = useState(false);
   // distanceText and etaText come from the Distance Matrix API result
   const { distanceText, etaText, selectedVehicle, origin, destination, routeCoords } = useSelector(
     state => state.ride,
@@ -54,6 +57,41 @@ function RideOptionsScreen() {
         latitudeDelta: 0.08,
         longitudeDelta: 0.08,
       };
+
+  const onConfirmRide = async () => {
+    if (!isOriginValid || !isDestinationValid) {
+      Alert.alert(t('common.error'), t('rideOptions.tripSaveError'));
+      return;
+    }
+
+    if (!user?.email && !user?.phone) {
+      Alert.alert(t('common.error'), t('rideOptions.completeProfileBeforeSave'));
+      return;
+    }
+
+    const fareValue = parseFareForStorage(distanceText, selectedVehicle);
+
+    setSavingRide(true);
+
+    try {
+      await saveRideForUser(user, {
+        origin,
+        destination,
+        selectedVehicle,
+        distanceText,
+        etaText,
+        fare: fareValue,
+        status: 'requested',
+      });
+
+      Alert.alert(t('rideOptions.tripSavedTitle'), t('rideOptions.tripSavedMessage'));
+    } catch (err) {
+      console.warn('Save ride error:', err.message);
+      Alert.alert(t('common.error'), t('rideOptions.tripSaveError'));
+    } finally {
+      setSavingRide(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -110,6 +148,16 @@ function RideOptionsScreen() {
           </TouchableOpacity>
         );
       })}
+
+      <TouchableOpacity
+        style={[styles.confirmButton, savingRide && styles.primaryButtonDisabled]}
+        onPress={onConfirmRide}
+        disabled={savingRide}
+      >
+        <Text style={styles.confirmButtonText}>
+          {savingRide ? t('rideOptions.savingRide') : t('rideOptions.confirmRide')}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -189,6 +237,11 @@ function parseDistanceInKm(distanceText) {
   return parsedValue;
 }
 
+function parseFareForStorage(distanceText, vehicle) {
+  const fare = parseFloat(estimateFareByVehicle(vehicle, distanceText));
+  return Number.isFinite(fare) ? fare : 0;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -258,6 +311,18 @@ const styles = StyleSheet.create({
   optionPrice: {
     marginTop: 6,
     color: '#4B5563',
+  },
+  confirmButton: {
+    marginTop: 16,
+    backgroundColor: '#111827',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 

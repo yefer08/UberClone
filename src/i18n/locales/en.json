@@ -55,7 +55,10 @@
   "tripHistory": {
     "title": "Trip History",
     "date": "Date",
-    "cost": "Cost"
+    "cost": "Cost",
+    "emptyHistory": "No trips found yet. Request a ride to populate your history.",
+    "completeProfileMessage": "Save profile information to see your trip history.",
+    "loadingHistory": "Loading your trip history..."
   },
   "rideOptions": {
     "title": "Choose your ride",
@@ -63,6 +66,12 @@
     "estimatedFare": "Estimated fare: ${{fare}}",
     "economico": "Economy",
     "xl": "XL",
-    "premium": "Premium"
+    "premium": "Premium",
+    "confirmRide": "Confirm ride",
+    "savingRide": "Saving ride...",
+    "tripSavedTitle": "Trip Saved",
+    "tripSavedMessage": "Your ride was saved to history successfully.",
+    "tripSaveError": "Could not save the trip. Please try again.",
+    "completeProfileBeforeSave": "Please save your profile before saving rides."
   }
 }

@@ -4,48 +4,39 @@
  * Autor: [Nombre de tu compañera]
  * Fecha: 20/05/2026
  *
- * Muestra una lista de viajes (mock data) con origen, destino, fecha y costo.
+ * Muestra una lista de viajes guardados en Firestore con origen, destino, fecha y costo.
  * Navegable desde HomeScreen y ProfileScreen.
  */
-import React from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View, Text, FlatList, StyleSheet } from 'react-native';
+import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-
-const TRIPS = [
-  {
-    id: '1',
-    origin: 'Av. Reforma 123',
-    destination: 'Aeropuerto CDMX',
-    date: '2026-05-18',
-    cost: '$180',
-  },
-  {
-    id: '2',
-    origin: 'Insurgentes 456',
-    destination: 'Parque Hundido',
-    date: '2026-05-15',
-    cost: '$75',
-  },
-  {
-    id: '3',
-    origin: 'Metro CU',
-    destination: 'Museo Soumaya',
-    date: '2026-05-10',
-    cost: '$120',
-  },
-];
+import { getRidesForUser } from '../firebase/firestore';
 
 /**
  * Renderiza una tarjeta de viaje.
  */
 function TripCard({ trip, t }) {
+  const origin = trip.origin?.address || formatCoordinates(trip.origin);
+  const destination = trip.destination?.address || formatCoordinates(trip.destination);
+  const date = trip.createdAt?.toDate ? trip.createdAt.toDate().toLocaleDateString() : trip.date;
+  const cost = trip.fare != null ? `$${trip.fare.toFixed(2)}` : trip.cost;
+
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{trip.origin} → {trip.destination}</Text>
-      <Text style={styles.detail}>{t('tripHistory.date')}: {trip.date}</Text>
-      <Text style={styles.detail}>{t('tripHistory.cost')}: {trip.cost}</Text>
+      <Text style={styles.title}>{origin} → {destination}</Text>
+      <Text style={styles.detail}>{t('tripHistory.date')}: {date}</Text>
+      <Text style={styles.detail}>{t('tripHistory.cost')}: {cost}</Text>
     </View>
   );
+}
+
+function formatCoordinates(point) {
+  if (!point || point.lat == null || point.lng == null) {
+    return 'N/A';
+  }
+
+  return `${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}`;
 }
 
 /**
@@ -53,16 +44,54 @@ function TripCard({ trip, t }) {
  */
 export default function TripHistoryScreen() {
   const { t } = useTranslation();
+  const user = useSelector(state => state.user);
+  const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadTrips() {
+      if (!user?.email && !user?.phone) {
+        setTrips([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const results = await getRidesForUser(user);
+        setTrips(results);
+      } catch (err) {
+        console.warn('Trip history load error:', err.message);
+        setTrips([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTrips();
+  }, [user]);
+
+  const hasProfile = !!user?.email || !!user?.phone;
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>{t('tripHistory.title')}</Text>
-      <FlatList
-        data={TRIPS}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => <TripCard trip={item} t={t} />}
-        contentContainerStyle={styles.listContent}
-      />
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#111827" style={styles.loader} />
+      ) : !hasProfile ? (
+        <Text style={styles.message}>{t('tripHistory.completeProfileMessage')}</Text>
+      ) : trips.length === 0 ? (
+        <Text style={styles.message}>{t('tripHistory.emptyHistory')}</Text>
+      ) : (
+        <FlatList
+          data={trips}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => <TripCard trip={item} t={t} />}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
     </View>
   );
 }
@@ -97,6 +126,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     marginBottom: 2,
+  },
+  loader: {
+    marginTop: 24,
+  },
+  message: {
+    marginTop: 24,
+    color: '#4B5563',
+    fontSize: 16,
+    lineHeight: 24,
   },
   listContent: {
     paddingBottom: 24,
