@@ -1,7 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
-// apply plugin: "com.google.gms.google-services" // Disabled: no google-services.json present
+apply plugin: "com.google.gms.google-services"
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -53,6 +53,11 @@ react {
 
     /* Autolinking */
     //autolinkLibrariesWithApp()
+
+    /* Explicit React Native codegen resolution */
+    reactNativeDir = file("../../node_modules/react-native")
+    codegenDir = file("../../node_modules/@react-native/codegen")
+    cliFile = file("../../node_modules/react-native/cli.js")
 }
 
 /**
@@ -90,9 +95,7 @@ if (envFile.exists()) {
     }
 }
 
-project.ext.react = [
-    newArchEnabled: false
-]
+project.ext.react = [:]
 
 // Configure Hermes flag (default: false) to avoid undefined variable errors
 def hermesEnabled = project.ext.react.get("hermesEnabled", false)
