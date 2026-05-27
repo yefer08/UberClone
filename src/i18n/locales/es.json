@@ -55,7 +55,8 @@
   "tripHistory": {
     "title": "Historial de viajes",
     "date": "Fecha",
-    "cost": "Costo"
+    "cost": "Costo",
+    "empty": "Aun no tienes viajes registrados."
   },
   "rideOptions": {
     "title": "Elige tu viaje",

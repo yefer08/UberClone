@@ -37,12 +37,14 @@ import { getPlaceDetails } from '../utils/playDetailServices';
 import { getDistanceMatrix } from '../utils/distanceMatrixService';
 import { getDirections } from '../utils/directionsService';
 import { hasValidMapsApiKey } from '../utils/mapsKey';
+import { appendTripToStorage } from '../utils/tripHistoryStorage';
 import {
   setDestination,
   setOrigin,
   setRouteCoords as setRouteCoordsInStore,
   setTripMetrics,
 } from '../store/slices/rideSlice';
+import { addTrip } from '../store/slices/tripHistorySlice';
 
 /**
  * Generates a random session token to group an autocomplete + place details
@@ -231,6 +233,20 @@ function HomeScreen({ navigation }) {
           etaText: metrics.duration.text,
         }),
       );
+
+      const trip = {
+        id: Date.now().toString(),
+        origin: `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}`,
+        destination: query,
+        date: new Date().toISOString().slice(0, 10),
+        distance: metrics.distance.text,
+        eta: metrics.duration.text,
+        cost: `$${estimateEconomyFare(metrics.distance.text)}`,
+      };
+
+      dispatch(addTrip(trip));
+      await appendTripToStorage(trip);
+
       navigation.navigate('RideOptions');
     } catch (err) {
       console.warn('Distance matrix error:', err.message);
@@ -242,6 +258,21 @@ function HomeScreen({ navigation }) {
 
   // Enable the CTA only when both origin (GPS) and destination (selected place) are ready
   const canStartTrip = !!userLocation && !!selectedPlace && !loadingTrip;
+
+  const estimateEconomyFare = distanceText => {
+    const normalized = (distanceText || '').replace(',', '.');
+    const parsedValue = parseFloat(normalized);
+
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+      return (40 + 5 * 9).toFixed(2);
+    }
+
+    const km = normalized.includes('m') && !normalized.includes('km')
+      ? parsedValue / 1000
+      : parsedValue;
+
+    return (40 + km * 9).toFixed(2);
+  };
 
   const mapRegion = userLocation
     ? {

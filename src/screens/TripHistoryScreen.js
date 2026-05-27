@@ -7,34 +7,12 @@
  * Muestra una lista de viajes (mock data) con origen, destino, fecha y costo.
  * Navegable desde HomeScreen y ProfileScreen.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-
-// Datos simulados (mock)
-const TRIPS = [
-  {
-    id: '1',
-    origin: 'Av. Reforma 123',
-    destination: 'Aeropuerto CDMX',
-    date: '2026-05-18',
-    cost: '$180',
-  },
-  {
-    id: '2',
-    origin: 'Insurgentes 456',
-    destination: 'Parque Hundido',
-    date: '2026-05-15',
-    cost: '$75',
-  },
-  {
-    id: '3',
-    origin: 'Metro CU',
-    destination: 'Museo Soumaya',
-    date: '2026-05-10',
-    cost: '$120',
-  },
-];
+import { useDispatch, useSelector } from 'react-redux';
+import { setTrips } from '../store/slices/tripHistorySlice';
+import { loadTripsFromStorage } from '../utils/tripHistoryStorage';
 
 /**
  * Renderiza una tarjeta de viaje.
@@ -44,6 +22,7 @@ function TripCard({ trip, t }) {
     <View style={styles.card}>
       <Text style={styles.title}>{trip.origin} → {trip.destination}</Text>
       <Text style={styles.detail}>{t('tripHistory.date')}: {trip.date}</Text>
+      <Text style={styles.detail}>{t('rideOptions.subtitle', { distance: trip.distance, eta: trip.eta })}</Text>
       <Text style={styles.detail}>{t('tripHistory.cost')}: {trip.cost}</Text>
     </View>
   );
@@ -54,16 +33,29 @@ function TripCard({ trip, t }) {
  */
 export default function TripHistoryScreen() {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const trips = useSelector(state => state.tripHistory.trips);
+
+  useEffect(() => {
+    (async () => {
+      const persistedTrips = await loadTripsFromStorage();
+      dispatch(setTrips(persistedTrips));
+    })();
+  }, [dispatch]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>{t('tripHistory.title')}</Text>
-      <FlatList
-        data={TRIPS}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => <TripCard trip={item} t={t} />}
-        contentContainerStyle={styles.listContent}
-      />
+      {trips.length === 0 ? (
+        <Text style={styles.emptyText}>{t('tripHistory.empty')}</Text>
+      ) : (
+        <FlatList
+          data={trips}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => <TripCard trip={item} t={t} />}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
     </View>
   );
 }
@@ -101,5 +93,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
   },
 });

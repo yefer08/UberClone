@@ -55,7 +55,8 @@
   "tripHistory": {
     "title": "Trip History",
     "date": "Date",
-    "cost": "Cost"
+    "cost": "Cost",
+    "empty": "You do not have any trips yet."
   },
   "rideOptions": {
     "title": "Choose your ride",

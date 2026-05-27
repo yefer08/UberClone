@@ -25,10 +25,9 @@ GOOGLE_MAPS_API_KEY=TU_API_KEY_AQUI
 
 1. Habilita APIs de Google necesarias para la key:
 
-- Places API
-- Place Details API
-- Directions API
-- Distance Matrix API
+- Maps SDK for Android
+- Places API (New)
+- Routes API
 
 ## Comandos de desarrollo
 
