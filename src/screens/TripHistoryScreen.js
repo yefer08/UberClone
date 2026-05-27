@@ -12,8 +12,30 @@ import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { setTrips } from '../store/slices/tripHistorySlice';
-import { loadTripsFromStorage } from '../utils/tripHistoryStorage';
-import { isFirebaseConfigured, loadTripsFromFirebase } from '../utils/firebaseTripService';
+import { loadTripsFromStorage, saveTripsToStorage } from '../utils/tripHistoryStorage';
+import { isFirebaseConfigured, loadTripsFromFirebase, syncTripsToFirebase } from '../utils/firebaseTripService';
+
+function mergeTrips(primaryTrips, secondaryTrips) {
+  const byId = new Map();
+
+  [...(primaryTrips || []), ...(secondaryTrips || [])].forEach(trip => {
+    if (!trip || !trip.id) {
+      return;
+    }
+
+    const existing = byId.get(trip.id);
+    if (!existing) {
+      byId.set(trip.id, trip);
+      return;
+    }
+
+    const existingCreatedAt = Number(existing.createdAt || 0);
+    const currentCreatedAt = Number(trip.createdAt || 0);
+    byId.set(trip.id, currentCreatedAt >= existingCreatedAt ? trip : existing);
+  });
+
+  return Array.from(byId.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+}
 
 /**
  * Renderiza una tarjeta de viaje.
@@ -46,16 +68,26 @@ export default function TripHistoryScreen() {
 
   useEffect(() => {
     (async () => {
-      if (isFirebaseConfigured()) {
-        const firebaseTrips = await loadTripsFromFirebase();
-        if (firebaseTrips.length > 0) {
-          dispatch(setTrips(firebaseTrips));
-          return;
-        }
+      const persistedTrips = await loadTripsFromStorage();
+
+      if (!isFirebaseConfigured()) {
+        dispatch(setTrips(persistedTrips));
+        return;
       }
 
-      const persistedTrips = await loadTripsFromStorage();
-      dispatch(setTrips(persistedTrips));
+      const firebaseTrips = await loadTripsFromFirebase();
+
+      if (firebaseTrips.length === 0) {
+        if (persistedTrips.length > 0) {
+          await syncTripsToFirebase(persistedTrips);
+        }
+        dispatch(setTrips(persistedTrips));
+        return;
+      }
+
+      const mergedTrips = mergeTrips(firebaseTrips, persistedTrips).slice(0, 50);
+      dispatch(setTrips(mergedTrips));
+      await saveTripsToStorage(mergedTrips);
     })();
   }, [dispatch]);
 

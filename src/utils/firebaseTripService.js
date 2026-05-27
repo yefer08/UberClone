@@ -24,6 +24,15 @@ function buildDocumentUrl(localId) {
   return `${FIRESTORE_BASE_URL}/projects/${projectId}/databases/(default)/documents/trips/${encodeURIComponent(localId)}?key=${apiKey}`;
 }
 
+function buildUpdateMaskQuery(fieldPaths) {
+  if (!Array.isArray(fieldPaths) || fieldPaths.length === 0) {
+    return '';
+  }
+
+  const uniqueFields = Array.from(new Set(fieldPaths));
+  return uniqueFields.map(field => `updateMask.fieldPaths=${encodeURIComponent(field)}`).join('&');
+}
+
 function serializeTrip(trip) {
   return {
     fields: {
@@ -47,7 +56,7 @@ function mapDocumentToTrip(document) {
   const id = document?.name?.split('/').pop();
 
   return {
-    id: id || fields.localId?.stringValue || Date.now().toString(),
+    id: decodeURIComponent(id || '') || fields.localId?.stringValue || Date.now().toString(),
     origin: fields.origin?.stringValue || '',
     destination: fields.destination?.stringValue || '',
     date: fields.date?.stringValue || '',
@@ -86,18 +95,22 @@ export async function appendTripToFirebase(trip) {
 
 function serializeTripChanges(changes) {
   const fields = {};
+  const fieldNames = [];
 
   if (typeof changes.status !== 'undefined') {
     fields.status = { stringValue: String(changes.status || 'idle') };
+    fieldNames.push('status');
   }
   if (typeof changes.paymentMethod !== 'undefined') {
     fields.paymentMethod = { stringValue: String(changes.paymentMethod || 'pending') };
+    fieldNames.push('paymentMethod');
   }
   if (typeof changes.vehicle !== 'undefined') {
     fields.vehicle = { stringValue: String(changes.vehicle || '') };
+    fieldNames.push('vehicle');
   }
 
-  return { fields };
+  return { fields, fieldNames };
 }
 
 export async function updateTripInFirebase(localId, changes) {
@@ -110,8 +123,11 @@ export async function updateTripInFirebase(localId, changes) {
     return;
   }
 
+  const updateMask = buildUpdateMaskQuery(payload.fieldNames);
+  const updateUrl = `${buildDocumentUrl(localId)}${updateMask ? `&${updateMask}` : ''}`;
+
   try {
-    const response = await fetch(buildDocumentUrl(localId), {
+    const response = await fetch(updateUrl, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -151,4 +167,17 @@ export async function loadTripsFromFirebase() {
     console.warn('Firebase load trips exception:', error.message);
     return [];
   }
+}
+
+export async function syncTripsToFirebase(trips) {
+  if (!isFirebaseConfigured()) {
+    return;
+  }
+
+  const safeTrips = Array.isArray(trips) ? trips : [];
+  if (safeTrips.length === 0) {
+    return;
+  }
+
+  await Promise.allSettled(safeTrips.map(trip => appendTripToFirebase(trip)));
 }

@@ -46,3 +46,14 @@ export async function updateTripInStorage(id, changes) {
     console.warn('Trip history update error:', error.message);
   }
 }
+
+export async function saveTripsToStorage(trips) {
+  const safeTrips = Array.isArray(trips) ? trips : [];
+  const next = safeTrips.slice(0, 50);
+
+  try {
+    await AsyncStorage.setItem(TRIP_HISTORY_KEY, JSON.stringify(next));
+  } catch (error) {
+    console.warn('Trip history replace error:', error.message);
+  }
+}
