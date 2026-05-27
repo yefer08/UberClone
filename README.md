@@ -21,6 +21,9 @@ npm install
 
 ```env
 GOOGLE_MAPS_API_KEY=TU_API_KEY_AQUI
+GOOGLE_MAPS_WEB_API_KEY=TU_API_KEY_WEB_OPCIONAL
+FIREBASE_PROJECT_ID=tu-proyecto-firebase
+FIREBASE_WEB_API_KEY=tu-api-key-web-firebase
 ```
 
 1. Habilita APIs de Google necesarias para la key:
@@ -28,6 +31,12 @@ GOOGLE_MAPS_API_KEY=TU_API_KEY_AQUI
 - Maps SDK for Android
 - Places API (New)
 - Routes API
+
+1. Configura Firestore para historial de viajes (NoSQL):
+
+- Crea base de datos Firestore en modo Native.
+- Crea coleccion `trips`.
+- Para demo academica, usa reglas temporales de lectura/escritura habilitadas.
 
 ## Comandos de desarrollo
 

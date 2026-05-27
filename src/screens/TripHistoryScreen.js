@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { setTrips } from '../store/slices/tripHistorySlice';
 import { loadTripsFromStorage } from '../utils/tripHistoryStorage';
+import { isFirebaseConfigured, loadTripsFromFirebase } from '../utils/firebaseTripService';
 
 /**
  * Renderiza una tarjeta de viaje.
@@ -38,6 +39,14 @@ export default function TripHistoryScreen() {
 
   useEffect(() => {
     (async () => {
+      if (isFirebaseConfigured()) {
+        const firebaseTrips = await loadTripsFromFirebase();
+        if (firebaseTrips.length > 0) {
+          dispatch(setTrips(firebaseTrips));
+          return;
+        }
+      }
+
       const persistedTrips = await loadTripsFromStorage();
       dispatch(setTrips(persistedTrips));
     })();

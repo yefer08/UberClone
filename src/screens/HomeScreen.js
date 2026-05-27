@@ -38,6 +38,7 @@ import { getDistanceMatrix } from '../utils/distanceMatrixService';
 import { getDirections } from '../utils/directionsService';
 import { hasValidMapsApiKey } from '../utils/mapsKey';
 import { appendTripToStorage } from '../utils/tripHistoryStorage';
+import { appendTripToFirebase } from '../utils/firebaseTripService';
 import {
   setDestination,
   setOrigin,
@@ -246,6 +247,7 @@ function HomeScreen({ navigation }) {
 
       dispatch(addTrip(trip));
       await appendTripToStorage(trip);
+      await appendTripToFirebase(trip);
 
       navigation.navigate('RideOptions');
     } catch (err) {
