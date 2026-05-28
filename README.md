@@ -1,23 +1,25 @@
 # ProyectoUberMovil
 
-Aplicacion movil tipo Uber construida con React Native CLI, Redux Toolkit, React Navigation e integracion con APIs de Google Maps.
+Aplicacion movil tipo Uber desarrollada con React Native CLI.
+
+## Stack
+
+- React Native CLI
+- Redux Toolkit
+- React Navigation
+- Google Maps APIs (Places, Directions, Distance Matrix)
+- Firebase Firestore
 
 ## Requisitos
 
 - Node.js 22+
-- Android Studio (Android)
+- Android Studio
 - Java 17+
-- Xcode 16+ (solo para iOS en macOS)
+- Xcode 16+ (solo iOS en macOS)
 
-## Configuracion de entorno
+## Variables de entorno
 
-1. Instala dependencias:
-
-```bash
-npm install
-```
-
-1. Configura las variables en `.env`:
+Crea el archivo `.env` con este contenido:
 
 ```env
 GOOGLE_MAPS_API_KEY=TU_API_KEY_AQUI
@@ -28,27 +30,27 @@ STRIPE_CHECKOUT_URL=https://buy.stripe.com/test_tu_link
 MERCADOPAGO_CHECKOUT_URL=https://www.mercadopago.com.mx/checkout/v1/redirect?pref_id=TU_PREFERENCE_ID
 ```
 
-1. Habilita APIs de Google necesarias para la key:
+APIs de Google requeridas:
 
 - Maps SDK for Android
 - Places API (New)
 - Routes API
 
-## Firebase (resumen)
-
-1. Activa Firestore en modo Native.
-2. Crea coleccion `trips`.
-3. Para demo academica, puedes usar reglas temporales abiertas.
-
-## Comandos de desarrollo
+## Instalacion y ejecucion
 
 ```bash
+npm install
 npm start
 npm run android
+```
+
+Para iOS (macOS):
+
+```bash
 npm run ios
 ```
 
-## Validaciones previas a entrega
+## Verificacion antes de entrega
 
 ```bash
 npm run lint
@@ -56,26 +58,21 @@ npm test -- --watchAll=false
 npx tsc --noEmit
 ```
 
-## Build de entrega Android
+## Build Android (release)
 
 ```bash
 cd android
 ./gradlew assembleRelease
 ```
 
-APK generado en:
+APK de salida:
 
 `android/app/build/outputs/apk/release/app-release.apk`
 
-## Funcionalidades implementadas
+## Funcionalidades principales
 
-- Seguimiento en tiempo real del conductor con marcador animado.
-- Ciclo completo de viaje: solicitado -> conductor en camino -> en curso -> finalizado -> pagado.
-- Pago dentro de la app: tarjeta, efectivo, Stripe y Mercado Pago (checkout URL).
-- Historial de viajes realizados con costo, fecha, estado y metodo de pago.
-
-## Guia de estudio
-
-La documentacion completa para estudiar y sustentar esta en:
-
-- `README_ESTUDIO.md`
+- Solicitud de viaje con origen/destino y calculo de ruta.
+- Estimacion de distancia, tiempo y tarifa por tipo de vehiculo.
+- Seguimiento en tiempo real del conductor (simulado).
+- Pago en app: tarjeta, efectivo, Stripe y Mercado Pago.
+- Historial de viajes con fecha, estado y costo.

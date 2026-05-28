@@ -76,3 +76,8 @@ yarn-error.log
 
 # Environment files
 .env
+
+# Local study/support docs not required for app delivery
+GUIA_CODIGO_ESENCIAL.md
+GUIA_ESTUDIO_SUSTENTACION.md
+README_ESTUDIO.md

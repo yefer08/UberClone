@@ -181,3 +181,46 @@ export async function syncTripsToFirebase(trips) {
 
   await Promise.allSettled(safeTrips.map(trip => appendTripToFirebase(trip)));
 }
+
+function buildUserDocumentUrl(userId) {
+  const { projectId, apiKey } = getFirestoreConfig();
+  return `${FIRESTORE_BASE_URL}/projects/${projectId}/databases/(default)/documents/users/${encodeURIComponent(userId)}?key=${apiKey}`;
+}
+
+function serializeUser(user) {
+  return {
+    fields: {
+      name: { stringValue: String(user.name || '') },
+      email: { stringValue: String(user.email || '') },
+      phone: { stringValue: String(user.phone || '') },
+      gender: { stringValue: String(user.gender || '') },
+      photo: { stringValue: String(user.photo || '') },
+      updatedAt: { integerValue: String(Date.now()) },
+    },
+  };
+}
+
+export async function saveUserToFirebase(user) {
+  if (!isFirebaseConfigured() || !user?.email) {
+    return;
+  }
+
+  const userId = encodeURIComponent(user.email.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+
+  try {
+    const response = await fetch(buildUserDocumentUrl(userId), {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(serializeUser(user)),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.warn('Firebase save user error:', errorBody);
+    }
+  } catch (error) {
+    console.warn('Firebase save user exception:', error.message);
+  }
+}

@@ -15,6 +15,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { Picker } from '@react-native-picker/picker';
 import { setUserProfile } from '../store/slices/userSlice';
+import { saveUserToFirebase } from '../utils/firebaseTripService';
 
 const GENDER_OPTIONS = [
   { value: '', translationKey: 'profile.genderPlaceholder' },
@@ -72,15 +73,16 @@ function ProfileScreen({ navigation }) {
       return;
     }
 
-    dispatch(
-      setUserProfile({
-        photo: photo.trim(),
-        name: name.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        gender,
-      }),
-    );
+    const updatedProfile = {
+      photo: photo.trim(),
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      gender,
+    };
+
+    dispatch(setUserProfile(updatedProfile));
+    saveUserToFirebase(updatedProfile);
 
     Alert.alert(t('profile.savedTitle'), t('profile.savedMessage'));
   };
