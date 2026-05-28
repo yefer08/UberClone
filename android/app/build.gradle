@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -71,6 +72,23 @@ def enableProguardInReleaseBuilds = false
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def hasReleaseSigning = project.hasProperty('MYAPP_UPLOAD_STORE_FILE') &&
+    project.hasProperty('MYAPP_UPLOAD_STORE_PASSWORD') &&
+    project.hasProperty('MYAPP_UPLOAD_KEY_ALIAS') &&
+    project.hasProperty('MYAPP_UPLOAD_KEY_PASSWORD')
+def envFile = rootProject.file('../.env')
+def mapsApiKey = ''
+
+if (envFile.exists()) {
+    envFile.readLines().find { line ->
+        def trimmedLine = line.trim()
+        trimmedLine &&
+                !trimmedLine.startsWith('#') &&
+                trimmedLine.startsWith('GOOGLE_MAPS_API_KEY=')
+    }?.with { line ->
+        mapsApiKey = line.split('=', 2)[1].trim()
+    }
+}
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -84,6 +102,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [GOOGLE_MAPS_API_KEY: mapsApiKey]
     }
     signingConfigs {
         debug {
@@ -91,6 +110,14 @@ android {
             storePassword 'android'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
+        }
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+            }
         }
     }
     buildTypes {
@@ -100,7 +127,7 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
