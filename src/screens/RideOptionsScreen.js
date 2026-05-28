@@ -77,8 +77,8 @@ function RideOptionsScreen() {
   const driverEtaMinutes = Math.max(Math.ceil(((driverPath.length - 1 - driverIndex) * 2) / 60), 0);
   const driverAnimatedCoordinate = useRef(
     new AnimatedRegion({
-      latitude: isOriginValid ? origin.lat : 19.4326,
-      longitude: isOriginValid ? origin.lng : -99.1332,
+      latitude: isOriginValid ? origin.lat : 6.2442,
+      longitude: isOriginValid ? origin.lng : -75.5812,
       latitudeDelta: 0.001,
       longitudeDelta: 0.001,
     }),
@@ -87,8 +87,8 @@ function RideOptionsScreen() {
   const mapRegion = isOriginValid
     ? buildRegion(origin, isDestinationValid ? destination : null)
     : {
-        latitude: 19.4326,
-        longitude: -99.1332,
+        latitude: 6.2442,
+        longitude: -75.5812,
         latitudeDelta: 0.08,
         longitudeDelta: 0.08,
       };

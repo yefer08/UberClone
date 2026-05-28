@@ -259,8 +259,8 @@ function HomeScreen({ navigation }) {
         longitudeDelta: 0.04,
       }
     : {
-        latitude: 19.4326,
-        longitude: -99.1332,
+        latitude: 6.2442,
+        longitude: -75.5812,
         latitudeDelta: 0.08,
         longitudeDelta: 0.08,
       };
