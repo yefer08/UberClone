@@ -13,6 +13,7 @@
   },
   "home": {
     "title": "Where to?",
+    "helperText": "Search for a destination to estimate distance and arrival time.",
     "searchPlaceholder": "Search destination...",
     "gettingLocation": "Getting your location...",
     "seeRideOptions": "See ride options",

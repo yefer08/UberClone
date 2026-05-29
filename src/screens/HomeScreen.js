@@ -303,6 +303,7 @@ function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{t('home.title')}</Text>
+      <Text style={styles.subtitle}>{t('home.helperText')}</Text>
 
       <View style={styles.mapCard}>
         {hasMapsApiKey ? (
@@ -430,7 +431,13 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginHorizontal: 20,
     marginTop: 20,
-    marginBottom: 14,
+    marginBottom: 4,
+  },
+  subtitle: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    color: '#6B7280',
+    fontSize: 13,
   },
   mapCard: {
     marginHorizontal: 20,
@@ -440,6 +447,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   map: {
     flex: 1,
@@ -466,6 +478,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 14,
     marginHorizontal: 20,
+    paddingBottom: 8,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -475,7 +488,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     paddingHorizontal: 14,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   input: {
     flex: 1,
@@ -544,7 +557,8 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: '#111827',
     borderRadius: 12,
-    paddingVertical: 14,
+    minHeight: 50,
+    justifyContent: 'center',
     alignItems: 'center',
     marginTop: 12,
   },
@@ -560,7 +574,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#C7D2FE',
     borderRadius: 14,
-    paddingVertical: 13,
+    minHeight: 50,
+    justifyContent: 'center',
     alignItems: 'center',
     marginTop: 10,
     backgroundColor: '#EEF2FF',

@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 18,
+    marginBottom: 14,
     color: '#111827',
   },
   label: {
@@ -343,6 +343,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
   },
   photoSection: {
     alignItems: 'center',
@@ -381,7 +382,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#111827',
     borderRadius: 10,
-    paddingVertical: 12,
+    minHeight: 48,
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
   },
@@ -431,7 +433,8 @@ const styles = StyleSheet.create({
     marginTop: 20,
     backgroundColor: '#111827',
     borderRadius: 12,
-    paddingVertical: 14,
+    minHeight: 50,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   buttonText: {
@@ -444,7 +447,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#111827',
     borderRadius: 12,
-    paddingVertical: 12,
+    minHeight: 48,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   historyButtonText: {
@@ -457,7 +461,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#B91C1C',
     borderRadius: 12,
-    paddingVertical: 12,
+    minHeight: 48,
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#FEF2F2',
   },
@@ -473,6 +478,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     padding: 14,
+    shadowColor: '#111827',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   previewTitle: {
     fontSize: 15,
