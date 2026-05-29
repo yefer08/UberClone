@@ -10,12 +10,27 @@
  *   - Phone must be numeric only
  */
 import React, { useState } from 'react';
-import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { Picker } from '@react-native-picker/picker';
-import { setUserProfile } from '../store/slices/userSlice';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { clearTrips } from '../store/slices/tripHistorySlice';
+import { clearUserProfile, setUserProfile } from '../store/slices/userSlice';
 import { saveUserToFirebase } from '../utils/firebaseTripService';
+import {
+  clearUserProfileFromStorage,
+  saveUserProfileToStorage,
+} from '../utils/userProfileStorage';
 
 const GENDER_OPTIONS = [
   { value: '', translationKey: 'profile.genderPlaceholder' },
@@ -23,6 +38,8 @@ const GENDER_OPTIONS = [
   { value: 'female', translationKey: 'profile.female' },
   { value: 'other', translationKey: 'profile.other' },
 ];
+
+const PHOTO_URI_PATTERN = /^(https?:\/\/|file:\/\/|content:\/\/|ph:\/\/)/i;
 
 /**
  * ProfileScreen component.
@@ -40,20 +57,58 @@ function ProfileScreen({ navigation }) {
   const [email, setEmail] = useState(user.email);
   const [phone, setPhone] = useState(user.phone);
   const [gender, setGender] = useState(user.gender);
-  const hasValidPhoto = /^https?:\/\//i.test(photo.trim());
+  const hasValidPhoto = PHOTO_URI_PATTERN.test(photo.trim());
+  const hasActiveProfile = !!(user.name || user.email || user.phone || user.gender || user.photo);
   const avatarInitial = (name.trim().charAt(0) || '?').toUpperCase();
+
+  const onPickPhoto = async () => {
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 1,
+      quality: 0.8,
+    });
+
+    if (result.didCancel) {
+      return;
+    }
+
+    const selectedUri = result.assets?.[0]?.uri;
+    if (!selectedUri) {
+      Alert.alert(t('common.error'), t('profile.photoPickError'));
+      return;
+    }
+
+    setPhoto(selectedUri);
+  };
 
   /**
    * Validates all form fields and dispatches the updated profile to Redux.
    * Shows an Alert for the first validation error found.
    */
-  const onSave = () => {
-    if (!photo.trim() || !name.trim() || !email.trim() || !phone.trim() || !gender) {
-      Alert.alert(t('profile.validationTitle'), t('profile.requiredFields'));
+  const onSave = async () => {
+    const missingFields = [];
+    if (!name.trim()) {
+      missingFields.push(t('profile.nameLabel'));
+    }
+    if (!email.trim()) {
+      missingFields.push(t('profile.emailLabel'));
+    }
+    if (!phone.trim()) {
+      missingFields.push(t('profile.phoneLabel'));
+    }
+    if (!gender) {
+      missingFields.push(t('profile.genderLabel'));
+    }
+
+    if (missingFields.length > 0) {
+      Alert.alert(
+        t('profile.validationTitle'),
+        t('profile.requiredFieldsList', { fields: missingFields.join(', ') }),
+      );
       return;
     }
 
-    if (!/^https?:\/\//i.test(photo.trim())) {
+    if (photo.trim() && !PHOTO_URI_PATTERN.test(photo.trim())) {
       Alert.alert(t('profile.validationTitle'), t('profile.invalidPhoto'));
       return;
     }
@@ -82,13 +137,46 @@ function ProfileScreen({ navigation }) {
     };
 
     dispatch(setUserProfile(updatedProfile));
+    await saveUserProfileToStorage(updatedProfile);
     saveUserToFirebase(updatedProfile);
 
     Alert.alert(t('profile.savedTitle'), t('profile.savedMessage'));
   };
 
+  const onLogout = () => {
+    Alert.alert(t('profile.logoutTitle'), t('profile.logoutConfirmMessage'), [
+      {
+        text: t('profile.logoutCancel'),
+        style: 'cancel',
+      },
+      {
+        text: t('profile.logoutConfirm'),
+        style: 'destructive',
+        onPress: async () => {
+          dispatch(clearTrips());
+          dispatch(clearUserProfile());
+          await clearUserProfileFromStorage();
+
+          setPhoto('');
+          setName('');
+          setEmail('');
+          setPhone('');
+          setGender('');
+
+          Alert.alert(t('profile.logoutDoneTitle'), t('profile.logoutDoneMessage'));
+          navigation.navigate('Home');
+        },
+      },
+    ]);
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.title}>{t('profile.title')}</Text>
 
       <Text style={styles.label}>{t('profile.photoLabel')}</Text>
@@ -104,13 +192,14 @@ function ProfileScreen({ navigation }) {
         </View>
       </View>
 
-      <TextInput
-        style={[styles.input, styles.photoInput]}
-        value={photo}
-        onChangeText={setPhoto}
-        autoCapitalize="none"
-        placeholder={t('profile.photoPlaceholder')}
-      />
+      <TouchableOpacity style={styles.photoPickerButton} onPress={onPickPhoto}>
+        <Text style={styles.photoPickerButtonText}>
+          {hasValidPhoto ? t('profile.changePhotoButton') : t('profile.choosePhotoButton')}
+        </Text>
+      </TouchableOpacity>
+      <Text style={styles.photoPickerHint}>
+        {hasValidPhoto ? t('profile.photoSelectedMessage') : t('profile.photoSourceHint')}
+      </Text>
 
       <Text style={styles.label}>{t('profile.nameLabel')}</Text>
       <TextInput
@@ -199,6 +288,12 @@ function ProfileScreen({ navigation }) {
         <Text style={styles.historyButtonText}>{t('profile.viewTripHistory')}</Text>
       </TouchableOpacity>
 
+      {hasActiveProfile && (
+        <TouchableOpacity style={styles.logoutButton} onPress={onLogout}>
+          <Text style={styles.logoutButtonText}>{t('profile.logoutButton')}</Text>
+        </TouchableOpacity>
+      )}
+
       <View style={styles.previewCard}>
         <Text style={styles.previewTitle}>{t('profile.summaryTitle')}</Text>
         <Text style={styles.previewText}>
@@ -217,7 +312,7 @@ function ProfileScreen({ navigation }) {
           {t('profile.genderLabel')}: {gender ? t(`profile.${gender}`) : t('common.notAvailable')}
         </Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -225,7 +320,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  contentContainer: {
     padding: 20,
+    paddingBottom: 34,
   },
   title: {
     fontSize: 24,
@@ -278,8 +376,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#3730A3',
   },
-  photoInput: {
+  photoPickerButton: {
     marginTop: 2,
+    borderWidth: 1,
+    borderColor: '#111827',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  photoPickerButtonText: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  photoPickerHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 6,
   },
   pickerWrapper: {
     borderWidth: 1,
@@ -336,6 +450,20 @@ const styles = StyleSheet.create({
   historyButtonText: {
     color: '#111827',
     fontWeight: '600',
+    fontSize: 15,
+  },
+  logoutButton: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#B91C1C',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+  },
+  logoutButtonText: {
+    color: '#B91C1C',
+    fontWeight: '700',
     fontSize: 15,
   },
   previewCard: {

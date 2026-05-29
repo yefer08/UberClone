@@ -51,6 +51,10 @@ import {
  * @returns {string} A short alphanumeric token.
  */
 const newSessionToken = () => Math.random().toString(36).slice(2);
+const DEFAULT_ORIGIN = {
+  lat: 6.2442,
+  lng: -75.5812,
+};
 
 /**
  * Requests ACCESS_FINE_LOCATION permission on Android at runtime.
@@ -59,6 +63,11 @@ const newSessionToken = () => Math.random().toString(36).slice(2);
  * @returns {Promise<boolean>} True if permission was granted.
  */
 async function requestLocationPermission(t) {
+  if (Platform.OS === 'ios') {
+    const status = await Geolocation.requestAuthorization('whenInUse');
+    return status === 'granted';
+  }
+
   if (Platform.OS !== 'android') {
     return true;
   }
@@ -98,38 +107,61 @@ function HomeScreen({ navigation }) {
   const [routeCoords, setRouteCoords] = useState([]);
   // Current device coordinates used as trip origin
   const [userLocation, setUserLocation] = useState(null);
+  // True while attempting to obtain GPS coordinates
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
+  // Indicates whether origin came from GPS or fallback city
+  const [locationSource, setLocationSource] = useState('gps');
   // True while the Distance Matrix call + Redux dispatch are in progress
   const [loadingTrip, setLoadingTrip] = useState(false);
 
   // Persists the session token across re-renders without triggering effects
   const sessionTokenRef = useRef(newSessionToken());
 
-  // Request location permission and obtain the device's current position on mount.
-  // The coordinates are stored as the trip origin in local state.
+  const fallbackToDefaultLocation = useCallback(
+    () => {
+      setUserLocation(DEFAULT_ORIGIN);
+      setLocationSource('fallback');
+    },
+    [],
+  );
+
+  const resolveUserLocation = useCallback(async () => {
+    setIsResolvingLocation(true);
+
+    const allowed = await requestLocationPermission(t);
+    if (!allowed) {
+      setIsResolvingLocation(false);
+      fallbackToDefaultLocation();
+      return;
+    }
+
+    Geolocation.getCurrentPosition(
+      position => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setLocationSource('gps');
+        setIsResolvingLocation(false);
+      },
+      error => {
+        console.warn('Geolocation error:', error.message);
+        setIsResolvingLocation(false);
+        fallbackToDefaultLocation();
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 10000,
+        forceLocationManager: true,
+      },
+    );
+  }, [fallbackToDefaultLocation, t]);
+
+  // Request location on mount and keep a safe fallback if GPS is unavailable.
   useEffect(() => {
-    (async () => {
-      const allowed = await requestLocationPermission(t);
-      if (!allowed) {
-        Alert.alert(t('home.permissionDeniedTitle'), t('home.permissionDeniedMessage'));
-        return;
-      }
-      Geolocation.getCurrentPosition(
-        position => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        error => console.warn('Geolocation error:', error.message),
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 10000,
-          forceLocationManager: true,
-        },
-      );
-    })();
-  }, [t]);
+    resolveUserLocation();
+  }, [resolveUserLocation]);
 
   /**
    * Debounced function that calls the Autocomplete API after the user stops
@@ -227,7 +259,10 @@ function HomeScreen({ navigation }) {
       dispatch(setDestination(selectedPlace));
       dispatch(
         setTripPlaceLabels({
-          originLabel: t('home.yourLocation'),
+          originLabel:
+            locationSource === 'fallback'
+              ? t('home.defaultLocationLabel')
+              : t('home.yourLocation'),
           destinationLabel: query.trim(),
         }),
       );
@@ -333,8 +368,17 @@ function HomeScreen({ navigation }) {
           />
         )}
 
-        {!userLocation && (
+        {isResolvingLocation && (
           <Text style={styles.locationNote}>{t('home.gettingLocation')}</Text>
+        )}
+
+        {locationSource === 'fallback' && (
+          <View style={styles.locationFallbackBox}>
+            <Text style={styles.locationFallbackText}>{t('home.defaultLocationHint')}</Text>
+            <TouchableOpacity style={styles.retryLocationButton} onPress={resolveUserLocation}>
+              <Text style={styles.retryLocationButtonText}>{t('home.retryLocation')}</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         <TouchableOpacity
@@ -470,6 +514,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#9CA3AF',
     marginBottom: 12,
+  },
+  locationFallbackBox: {
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    backgroundColor: '#FFFBEB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  locationFallbackText: {
+    fontSize: 13,
+    color: '#92400E',
+    marginBottom: 8,
+  },
+  retryLocationButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#111827',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  retryLocationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   primaryButton: {
     backgroundColor: '#111827',

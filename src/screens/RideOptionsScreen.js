@@ -19,7 +19,11 @@ import { setRideRequestStatus, setSelectedVehicle } from '../store/slices/rideSl
 import { hasValidMapsApiKey } from '../utils/mapsKey';
 import { addTrip, updateTripById } from '../store/slices/tripHistorySlice';
 import { appendTripToStorage, updateTripInStorage } from '../utils/tripHistoryStorage';
-import { appendTripToFirebase, updateTripInFirebase } from '../utils/firebaseTripService';
+import {
+  appendTripToFirebase,
+  buildUserIdFromEmail,
+  updateTripInFirebase,
+} from '../utils/firebaseTripService';
 
 /** Available vehicle categories. Order determines display order on screen. */
 const VEHICLES = ['Economico', 'XL', 'Premium'];
@@ -62,6 +66,7 @@ function RideOptionsScreen() {
     routeCoords,
     requestStatus,
   } = useSelector(state => state.ride);
+  const activeUser = useSelector(state => state.user);
   const hasMapsApiKey = hasValidMapsApiKey(Config.GOOGLE_MAPS_API_KEY);
   const isOriginValid = isValidLatLng(origin);
   const isDestinationValid = isValidLatLng(destination);
@@ -109,14 +114,27 @@ function RideOptionsScreen() {
       return;
     }
 
+    if (!activeUser?.email?.trim()) {
+      Alert.alert(
+        t('profile.validationTitle'),
+        t('rideOptions.profileRequiredMessage'),
+      );
+      return;
+    }
+
+    const normalizedEmail = activeUser.email.trim().toLowerCase();
+    const userId = buildUserIdFromEmail(normalizedEmail);
+
     const trip = {
       id: Date.now().toString(),
+      userId,
+      userEmail: normalizedEmail,
       origin: originLabel || t('home.yourLocation'),
       destination: destinationLabel || t('home.destination'),
       date: new Date().toISOString().slice(0, 10),
       distance: distanceText || t('common.notAvailable'),
       eta: etaText || t('common.notAvailable'),
-      cost: `$${estimateFareByVehicle(selectedVehicle, distanceText)}`,
+      cost: formatCopAmount(estimateFareByVehicle(selectedVehicle, distanceText)),
       vehicle: selectedVehicle,
       status: 'requested',
       paymentMethod: 'pending',
@@ -351,7 +369,7 @@ function RideOptionsScreen() {
             </Text>
             <Text style={styles.optionPrice}>
               {t('rideOptions.estimatedFare', {
-                fare: estimateFareByVehicle(vehicle, distanceText),
+                fare: formatCopAmount(estimateFareByVehicle(vehicle, distanceText)),
               })}
             </Text>
           </TouchableOpacity>
@@ -514,12 +532,18 @@ function estimateFareByVehicle(vehicle, distanceText) {
   const km = parseDistanceInKm(distanceText);
 
   if (vehicle === 'Economico') {
-    return (40 + km * 9).toFixed(2);
+    return Math.round(7000 + km * 1800);
   }
   if (vehicle === 'XL') {
-    return (65 + km * 12).toFixed(2);
+    return Math.round(10000 + km * 2400);
   }
-  return (90 + km * 16).toFixed(2);
+  return Math.round(14000 + km * 3200);
+}
+
+function formatCopAmount(amount) {
+  const safeAmount = Number.isFinite(amount) ? Math.max(Math.round(amount), 0) : 0;
+  const withThousands = safeAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `COP ${withThousands}`;
 }
 
 function parseDistanceInKm(distanceText) {

@@ -9,6 +9,13 @@ function getFirestoreConfig() {
   };
 }
 
+export function buildUserIdFromEmail(email) {
+  return String(email || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '_');
+}
+
 export function isFirebaseConfigured() {
   const { projectId, apiKey } = getFirestoreConfig();
   return !!projectId && !!apiKey;
@@ -37,6 +44,8 @@ function serializeTrip(trip) {
   return {
     fields: {
       localId: { stringValue: String(trip.id || '') },
+      userId: { stringValue: String(trip.userId || '') },
+      userEmail: { stringValue: String(trip.userEmail || '') },
       origin: { stringValue: String(trip.origin || '') },
       destination: { stringValue: String(trip.destination || '') },
       date: { stringValue: String(trip.date || '') },
@@ -57,6 +66,8 @@ function mapDocumentToTrip(document) {
 
   return {
     id: decodeURIComponent(id || '') || fields.localId?.stringValue || Date.now().toString(),
+    userId: fields.userId?.stringValue || '',
+    userEmail: fields.userEmail?.stringValue || '',
     origin: fields.origin?.stringValue || '',
     destination: fields.destination?.stringValue || '',
     date: fields.date?.stringValue || '',
@@ -205,7 +216,7 @@ export async function saveUserToFirebase(user) {
     return;
   }
 
-  const userId = encodeURIComponent(user.email.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+  const userId = encodeURIComponent(buildUserIdFromEmail(user.email));
 
   try {
     const response = await fetch(buildUserDocumentUrl(userId), {
