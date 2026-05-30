@@ -25,7 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import Config from 'react-native-config';
 import debounce from 'lodash.debounce';
@@ -55,6 +55,18 @@ const DEFAULT_ORIGIN = {
   lat: 6.2442,
   lng: -75.5812,
 };
+const EMULATOR_DEFAULT_ORIGIN = {
+  lat: 37.421998,
+  lng: -122.084,
+};
+
+const isNearCoordinate = (value, target, threshold = 0.0005) =>
+  Math.abs(value - target) <= threshold;
+
+const isEmulatorDefaultOrigin = coords =>
+  !!coords &&
+  isNearCoordinate(coords.lat, EMULATOR_DEFAULT_ORIGIN.lat) &&
+  isNearCoordinate(coords.lng, EMULATOR_DEFAULT_ORIGIN.lng);
 
 /**
  * Requests ACCESS_FINE_LOCATION permission on Android at runtime.
@@ -63,11 +75,6 @@ const DEFAULT_ORIGIN = {
  * @returns {Promise<boolean>} True if permission was granted.
  */
 async function requestLocationPermission(t) {
-  if (Platform.OS === 'ios') {
-    const status = await Geolocation.requestAuthorization('whenInUse');
-    return status === 'granted';
-  }
-
   if (Platform.OS !== 'android') {
     return true;
   }
@@ -94,6 +101,12 @@ function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const hasMapsApiKey = hasValidMapsApiKey(Config.GOOGLE_MAPS_API_KEY);
+  const { requestStatus, destinationLabel } = useSelector(state => state.ride);
+  const isTripActive =
+    requestStatus !== 'idle' &&
+    requestStatus !== 'cancelled' &&
+    requestStatus !== 'completed' &&
+    requestStatus !== 'paid';
 
   // Text currently shown in the search input
   const [query, setQuery] = useState('');
@@ -107,61 +120,47 @@ function HomeScreen({ navigation }) {
   const [routeCoords, setRouteCoords] = useState([]);
   // Current device coordinates used as trip origin
   const [userLocation, setUserLocation] = useState(null);
-  // True while attempting to obtain GPS coordinates
-  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
-  // Indicates whether origin came from GPS or fallback city
-  const [locationSource, setLocationSource] = useState('gps');
   // True while the Distance Matrix call + Redux dispatch are in progress
   const [loadingTrip, setLoadingTrip] = useState(false);
 
   // Persists the session token across re-renders without triggering effects
   const sessionTokenRef = useRef(newSessionToken());
 
-  const fallbackToDefaultLocation = useCallback(
-    () => {
-      setUserLocation(DEFAULT_ORIGIN);
-      setLocationSource('fallback');
-    },
-    [],
-  );
-
-  const resolveUserLocation = useCallback(async () => {
-    setIsResolvingLocation(true);
-
-    const allowed = await requestLocationPermission(t);
-    if (!allowed) {
-      setIsResolvingLocation(false);
-      fallbackToDefaultLocation();
-      return;
-    }
-
-    Geolocation.getCurrentPosition(
-      position => {
-        setUserLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        setLocationSource('gps');
-        setIsResolvingLocation(false);
-      },
-      error => {
-        console.warn('Geolocation error:', error.message);
-        setIsResolvingLocation(false);
-        fallbackToDefaultLocation();
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 10000,
-        forceLocationManager: true,
-      },
-    );
-  }, [fallbackToDefaultLocation, t]);
-
-  // Request location on mount and keep a safe fallback if GPS is unavailable.
+  // Request location permission and obtain the device's current position on mount.
+  // The coordinates are stored as the trip origin in local state.
   useEffect(() => {
-    resolveUserLocation();
-  }, [resolveUserLocation]);
+    (async () => {
+      const allowed = await requestLocationPermission(t);
+      if (!allowed) {
+        Alert.alert(t('home.permissionDeniedTitle'), t('home.permissionDeniedMessage'));
+        return;
+      }
+      Geolocation.getCurrentPosition(
+        position => {
+          const rawCoords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          const safeCoords =
+            Platform.OS === 'android' && isEmulatorDefaultOrigin(rawCoords)
+              ? DEFAULT_ORIGIN
+              : rawCoords;
+
+          setUserLocation({
+            lat: safeCoords.lat,
+            lng: safeCoords.lng,
+          });
+        },
+        error => console.warn('Geolocation error:', error.message),
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 10000,
+          forceLocationManager: true,
+        },
+      );
+    })();
+  }, [t]);
 
   /**
    * Debounced function that calls the Autocomplete API after the user stops
@@ -259,10 +258,7 @@ function HomeScreen({ navigation }) {
       dispatch(setDestination(selectedPlace));
       dispatch(
         setTripPlaceLabels({
-          originLabel:
-            locationSource === 'fallback'
-              ? t('home.defaultLocationLabel')
-              : t('home.yourLocation'),
+          originLabel: t('home.yourLocation'),
           destinationLabel: query.trim(),
         }),
       );
@@ -303,7 +299,23 @@ function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{t('home.title')}</Text>
-      <Text style={styles.subtitle}>{t('home.helperText')}</Text>
+      {isTripActive && (
+        <TouchableOpacity
+          style={styles.activeTripBanner}
+          onPress={() => navigation.navigate('RideOptions')}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.activeTripTitle}>{t('home.activeTripTitle')}</Text>
+          <Text style={styles.activeTripSubtitle}>
+            {t('home.activeTripStatus', { status: t(`rideOptions.status.${requestStatus}`) })}
+          </Text>
+          <Text style={styles.activeTripSubtitle}>
+            {t('home.activeTripDestination', {
+              destination: destinationLabel || t('common.notAvailable'),
+            })}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.mapCard}>
         {hasMapsApiKey ? (
@@ -369,17 +381,8 @@ function HomeScreen({ navigation }) {
           />
         )}
 
-        {isResolvingLocation && (
+        {!userLocation && (
           <Text style={styles.locationNote}>{t('home.gettingLocation')}</Text>
-        )}
-
-        {locationSource === 'fallback' && (
-          <View style={styles.locationFallbackBox}>
-            <Text style={styles.locationFallbackText}>{t('home.defaultLocationHint')}</Text>
-            <TouchableOpacity style={styles.retryLocationButton} onPress={resolveUserLocation}>
-              <Text style={styles.retryLocationButtonText}>{t('home.retryLocation')}</Text>
-            </TouchableOpacity>
-          </View>
         )}
 
         <TouchableOpacity
@@ -431,13 +434,26 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginHorizontal: 20,
     marginTop: 20,
-    marginBottom: 4,
+    marginBottom: 14,
   },
-  subtitle: {
+  activeTripBanner: {
     marginHorizontal: 20,
     marginBottom: 12,
-    color: '#6B7280',
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  activeTripTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+  activeTripSubtitle: {
+    marginTop: 4,
     fontSize: 13,
+    color: '#1E3A8A',
   },
   mapCard: {
     marginHorizontal: 20,
@@ -447,11 +463,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
   },
   map: {
     flex: 1,
@@ -478,7 +489,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 14,
     marginHorizontal: 20,
-    paddingBottom: 8,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -488,7 +498,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     paddingHorizontal: 14,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   input: {
     flex: 1,
@@ -528,37 +538,10 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginBottom: 12,
   },
-  locationFallbackBox: {
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#F59E0B',
-    backgroundColor: '#FFFBEB',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  locationFallbackText: {
-    fontSize: 13,
-    color: '#92400E',
-    marginBottom: 8,
-  },
-  retryLocationButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#111827',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  retryLocationButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
   primaryButton: {
     backgroundColor: '#111827',
     borderRadius: 12,
-    minHeight: 50,
-    justifyContent: 'center',
+    paddingVertical: 14,
     alignItems: 'center',
     marginTop: 12,
   },
@@ -574,8 +557,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#C7D2FE',
     borderRadius: 14,
-    minHeight: 50,
-    justifyContent: 'center',
+    paddingVertical: 13,
     alignItems: 'center',
     marginTop: 10,
     backgroundColor: '#EEF2FF',

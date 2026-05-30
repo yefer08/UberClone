@@ -19,11 +19,7 @@ import { setRideRequestStatus, setSelectedVehicle } from '../store/slices/rideSl
 import { hasValidMapsApiKey } from '../utils/mapsKey';
 import { addTrip, updateTripById } from '../store/slices/tripHistorySlice';
 import { appendTripToStorage, updateTripInStorage } from '../utils/tripHistoryStorage';
-import {
-  appendTripToFirebase,
-  buildUserIdFromEmail,
-  updateTripInFirebase,
-} from '../utils/firebaseTripService';
+import { appendTripToFirebase, updateTripInFirebase } from '../utils/firebaseTripService';
 
 /** Available vehicle categories. Order determines display order on screen. */
 const VEHICLES = ['Economico', 'XL', 'Premium'];
@@ -35,6 +31,8 @@ const VEHICLE_TRANSLATION_KEYS = {
 };
 
 const PAYMENT_METHODS = ['card', 'cash', 'stripe', 'mercadopago'];
+const DRIVER_ACCEPT_DELAY_MS = 3500;
+const DRIVER_STEP_INTERVAL_MS = 1800;
 
 /**
  * RideOptionsScreen component.
@@ -66,7 +64,6 @@ function RideOptionsScreen() {
     routeCoords,
     requestStatus,
   } = useSelector(state => state.ride);
-  const activeUser = useSelector(state => state.user);
   const hasMapsApiKey = hasValidMapsApiKey(Config.GOOGLE_MAPS_API_KEY);
   const isOriginValid = isValidLatLng(origin);
   const isDestinationValid = isValidLatLng(destination);
@@ -74,10 +71,23 @@ function RideOptionsScreen() {
     () => (Array.isArray(routeCoords) ? routeCoords.filter(point => isValidMapPoint(point)) : []),
     [routeCoords],
   );
-  const driverPath = useMemo(
-    () => buildDriverPath(validRouteCoords, origin, destination),
+  const tripRouteCoords = useMemo(
+    () => buildTripRoutePolyline(validRouteCoords, origin, destination),
     [destination, origin, validRouteCoords],
   );
+  const pickupRouteCoords = useMemo(
+    () => buildPickupRoutePolyline(origin, destination),
+    [destination, origin],
+  );
+  const shouldShowPickupRoute =
+    requestStatus === 'requested' || requestStatus === 'driver_arriving';
+  const shouldShowTripRoute = requestStatus === 'in_progress' || requestStatus === 'completed' || requestStatus === 'paid';
+  const canSelectVehicle = requestStatus === 'idle' || requestStatus === 'cancelled';
+  const driverPath = useMemo(
+    () => buildDriverPath(pickupRouteCoords, tripRouteCoords),
+    [pickupRouteCoords, tripRouteCoords],
+  );
+  const pickupArrivalIndex = Math.max(pickupRouteCoords.length - 1, 0);
   const driverCoordinate = driverPath[driverIndex] || null;
   const driverEtaMinutes = Math.max(Math.ceil(((driverPath.length - 1 - driverIndex) * 2) / 60), 0);
   const driverAnimatedCoordinate = useRef(
@@ -114,21 +124,8 @@ function RideOptionsScreen() {
       return;
     }
 
-    if (!activeUser?.email?.trim()) {
-      Alert.alert(
-        t('profile.validationTitle'),
-        t('rideOptions.profileRequiredMessage'),
-      );
-      return;
-    }
-
-    const normalizedEmail = activeUser.email.trim().toLowerCase();
-    const userId = buildUserIdFromEmail(normalizedEmail);
-
     const trip = {
       id: Date.now().toString(),
-      userId,
-      userEmail: normalizedEmail,
       origin: originLabel || t('home.yourLocation'),
       destination: destinationLabel || t('home.destination'),
       date: new Date().toISOString().slice(0, 10),
@@ -258,57 +255,63 @@ function RideOptionsScreen() {
 
     let index = 0;
     setDriverIndex(0);
-
-    simulationRef.current = setInterval(() => {
-      index += 1;
-
-      if (index >= driverPath.length) {
-        index = driverPath.length - 1;
+    const acceptanceTimeout = setTimeout(() => {
+      if (simulationRef.current) {
+        clearInterval(simulationRef.current);
       }
 
-      setDriverIndex(index);
+      simulationRef.current = setInterval(() => {
+        index += 1;
 
-      const halfway = Math.floor((driverPath.length - 1) * 0.5);
-      if (index === 1) {
-        dispatch(setRideRequestStatus('driver_arriving'));
-        if (activeTripId) {
-          const changes = { status: 'driver_arriving' };
-          dispatch(updateTripById({ id: activeTripId, changes }));
-          persistTripChanges(activeTripId, changes);
-        }
-      }
-      if (index >= halfway) {
-        dispatch(setRideRequestStatus('in_progress'));
-        if (activeTripId) {
-          const changes = { status: 'in_progress' };
-          dispatch(updateTripById({ id: activeTripId, changes }));
-          persistTripChanges(activeTripId, changes);
-        }
-      }
-
-      if (index >= driverPath.length - 1) {
-        if (simulationRef.current) {
-          clearInterval(simulationRef.current);
-          simulationRef.current = null;
+        if (index >= driverPath.length) {
+          index = driverPath.length - 1;
         }
 
-        dispatch(setRideRequestStatus('completed'));
-        setIsPaymentPending(true);
-        if (activeTripId) {
-          const changes = { status: 'completed' };
-          dispatch(updateTripById({ id: activeTripId, changes }));
-          persistTripChanges(activeTripId, changes);
+        setDriverIndex(index);
+
+        const tripStartIndex = pickupArrivalIndex;
+        if (index === 1) {
+          dispatch(setRideRequestStatus('driver_arriving'));
+          if (activeTripId) {
+            const changes = { status: 'driver_arriving' };
+            dispatch(updateTripById({ id: activeTripId, changes }));
+            persistTripChanges(activeTripId, changes);
+          }
         }
-      }
-    }, 2000);
+        if (index >= tripStartIndex && tripStartIndex > 0) {
+          dispatch(setRideRequestStatus('in_progress'));
+          if (activeTripId) {
+            const changes = { status: 'in_progress' };
+            dispatch(updateTripById({ id: activeTripId, changes }));
+            persistTripChanges(activeTripId, changes);
+          }
+        }
+
+        if (index >= driverPath.length - 1) {
+          if (simulationRef.current) {
+            clearInterval(simulationRef.current);
+            simulationRef.current = null;
+          }
+
+          dispatch(setRideRequestStatus('completed'));
+          setIsPaymentPending(true);
+          if (activeTripId) {
+            const changes = { status: 'completed' };
+            dispatch(updateTripById({ id: activeTripId, changes }));
+            persistTripChanges(activeTripId, changes);
+          }
+        }
+      }, DRIVER_STEP_INTERVAL_MS);
+    }, DRIVER_ACCEPT_DELAY_MS);
 
     return () => {
+      clearTimeout(acceptanceTimeout);
       if (simulationRef.current) {
         clearInterval(simulationRef.current);
         simulationRef.current = null;
       }
     };
-  }, [activeTripId, dispatch, driverPath, requestStatus]);
+  }, [activeTripId, dispatch, driverPath, pickupArrivalIndex, requestStatus]);
 
   return (
     <View style={styles.container}>
@@ -343,8 +346,11 @@ function RideOptionsScreen() {
                 pinColor="#16A34A"
               />
             )}
-            {validRouteCoords.length > 1 && (
-              <Polyline coordinates={validRouteCoords} strokeColor="#2563EB" strokeWidth={4} />
+            {shouldShowPickupRoute && pickupRouteCoords.length > 1 && (
+              <Polyline coordinates={pickupRouteCoords} strokeColor="#F97316" strokeWidth={4} />
+            )}
+            {shouldShowTripRoute && tripRouteCoords.length > 1 && (
+              <Polyline coordinates={tripRouteCoords} strokeColor="#2563EB" strokeWidth={4} />
             )}
           </MapView>
         ) : (
@@ -355,30 +361,34 @@ function RideOptionsScreen() {
         )}
       </View>
 
-      {VEHICLES.map(vehicle => {
-        const isSelected = selectedVehicle === vehicle;
+      {canSelectVehicle &&
+        VEHICLES.map(vehicle => {
+          const isSelected = selectedVehicle === vehicle;
 
-        return (
-          <TouchableOpacity
-            key={vehicle}
-            style={[styles.optionCard, isSelected && styles.optionCardSelected]}
-            onPress={() => dispatch(setSelectedVehicle(vehicle))}
-          >
-            <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
-              {t(VEHICLE_TRANSLATION_KEYS[vehicle])}
-            </Text>
-            <Text style={styles.optionPrice}>
-              {t('rideOptions.estimatedFare', {
-                fare: formatCopAmount(estimateFareByVehicle(vehicle, distanceText)),
-              })}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+          return (
+            <TouchableOpacity
+              key={vehicle}
+              style={[styles.optionCard, isSelected && styles.optionCardSelected]}
+              onPress={() => dispatch(setSelectedVehicle(vehicle))}
+            >
+              <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
+                {t(VEHICLE_TRANSLATION_KEYS[vehicle])}
+              </Text>
+              <Text style={styles.optionPrice}>
+                {t('rideOptions.estimatedFare', {
+                  fare: formatCopAmount(estimateFareByVehicle(vehicle, distanceText)),
+                })}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
 
       <View style={styles.requestStatusCard}>
         <Text style={styles.requestStatusLabel}>{t('rideOptions.requestStatusLabel')}</Text>
         <Text style={styles.requestStatusValue}>{t(`rideOptions.status.${requestStatus}`)}</Text>
+        {requestStatus === 'requested' && (
+          <Text style={styles.requestStatusSearching}>{t('rideOptions.searchingDriver')}</Text>
+        )}
         {requestStatus !== 'idle' && requestStatus !== 'cancelled' && (
           <Text style={styles.requestStatusEta}>
             {t('rideOptions.driverEta', { eta: driverEtaMinutes })}
@@ -386,13 +396,15 @@ function RideOptionsScreen() {
         )}
       </View>
 
-      <TouchableOpacity
-        style={[styles.confirmButton, isConfirming && styles.confirmButtonDisabled]}
-        onPress={onConfirmRideRequest}
-        disabled={isConfirming}
-      >
-        <Text style={styles.confirmButtonText}>{t('rideOptions.confirmRequest')}</Text>
-      </TouchableOpacity>
+      {canSelectVehicle && (
+        <TouchableOpacity
+          style={[styles.confirmButton, isConfirming && styles.confirmButtonDisabled]}
+          onPress={onConfirmRideRequest}
+          disabled={isConfirming}
+        >
+          <Text style={styles.confirmButtonText}>{t('rideOptions.confirmRequest')}</Text>
+        </TouchableOpacity>
+      )}
 
       {requestStatus === 'requested' && (
         <TouchableOpacity style={styles.cancelButton} onPress={onCancelRequest}>
@@ -465,7 +477,23 @@ function RideOptionsScreen() {
   );
 }
 
-function buildDriverPath(validRouteCoords, origin, destination) {
+function buildDriverPath(pickupRouteCoords, tripRouteCoords) {
+  if (pickupRouteCoords.length > 1 && tripRouteCoords.length > 1) {
+    return [...pickupRouteCoords, ...tripRouteCoords.slice(1)];
+  }
+
+  if (pickupRouteCoords.length > 1) {
+    return pickupRouteCoords;
+  }
+
+  if (tripRouteCoords.length > 1) {
+    return tripRouteCoords;
+  }
+
+  return [];
+}
+
+function buildTripRoutePolyline(validRouteCoords, origin, destination) {
   if (validRouteCoords.length > 1) {
     return validRouteCoords;
   }
@@ -478,6 +506,44 @@ function buildDriverPath(validRouteCoords, origin, destination) {
   }
 
   return [];
+}
+
+function buildPickupRoutePolyline(origin, destination) {
+  if (!isValidLatLng(origin)) {
+    return [];
+  }
+
+  const driverStart = buildSimulatedDriverStart(origin, destination);
+  return interpolatePath(driverStart, { latitude: origin.lat, longitude: origin.lng }, 8);
+}
+
+function buildSimulatedDriverStart(origin, destination) {
+  const latOffsetBase = 0.010;
+  const lngOffsetBase = 0.012;
+  const latDirection = destination && destination.lat >= origin.lat ? -1 : 1;
+  const lngDirection = destination && destination.lng >= origin.lng ? -1 : 1;
+
+  return {
+    latitude: origin.lat + latOffsetBase * latDirection,
+    longitude: origin.lng + lngOffsetBase * lngDirection,
+  };
+}
+
+function interpolatePath(start, end, steps) {
+  if (!start || !end || steps < 2) {
+    return [start, end].filter(Boolean);
+  }
+
+  const points = [];
+  for (let step = 0; step < steps; step += 1) {
+    const ratio = step / (steps - 1);
+    points.push({
+      latitude: start.latitude + (end.latitude - start.latitude) * ratio,
+      longitude: start.longitude + (end.longitude - start.longitude) * ratio,
+    });
+  }
+
+  return points;
 }
 
 function isValidLatLng(point) {
@@ -585,11 +651,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    shadowColor: '#111827',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
   },
   map: {
     flex: 1,
@@ -619,11 +680,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    shadowColor: '#111827',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
   },
   optionCardSelected: {
     borderColor: '#111827',
@@ -659,6 +715,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
+  requestStatusSearching: {
+    marginTop: 6,
+    fontSize: 13,
+    color: '#1D4ED8',
+    fontWeight: '600',
+  },
   requestStatusEta: {
     marginTop: 6,
     fontSize: 13,
@@ -668,8 +730,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     backgroundColor: '#111827',
     borderRadius: 12,
-    minHeight: 50,
-    justifyContent: 'center',
+    paddingVertical: 13,
     alignItems: 'center',
   },
   confirmButtonText: {
@@ -685,10 +746,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#DC2626',
-    minHeight: 46,
-    justifyContent: 'center',
+    paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
   },
   cancelButtonText: {
     color: '#DC2626',
