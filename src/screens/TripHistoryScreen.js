@@ -1,107 +1,114 @@
-/**
- * TripHistoryScreen
- * Pantalla para mostrar el historial de viajes del usuario.
- * Autor: [Nombre de tu compañera]
- * Fecha: 20/05/2026
- *
- * Muestra una lista de viajes (mock data) con origen, destino, fecha y costo.
- * Navegable desde HomeScreen y ProfileScreen.
- */
-import React, { useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { setTrips } from '../store/slices/tripHistorySlice';
-import { loadTripsFromStorage, saveTripsToStorage } from '../utils/tripHistoryStorage';
-import { isFirebaseConfigured, loadTripsFromFirebase, syncTripsToFirebase } from '../utils/firebaseTripService';
+import { loadTripsFromFirebase } from '../utils/firebaseTripService';
+import { loadTripsFromStorage } from '../utils/tripHistoryStorage';
 
-function mergeTrips(primaryTrips, secondaryTrips) {
-  const byId = new Map();
+function mergeTrips(localTrips, remoteTrips) {
+  const mergedMap = new Map();
 
-  [...(primaryTrips || []), ...(secondaryTrips || [])].forEach(trip => {
-    if (!trip || !trip.id) {
+  [...remoteTrips, ...localTrips].forEach(trip => {
+    if (!trip?.id) {
       return;
     }
 
-    const existing = byId.get(trip.id);
-    if (!existing) {
-      byId.set(trip.id, trip);
-      return;
+    const previous = mergedMap.get(trip.id);
+    if (!previous || (trip.createdAt || 0) >= (previous.createdAt || 0)) {
+      mergedMap.set(trip.id, trip);
     }
-
-    const existingCreatedAt = Number(existing.createdAt || 0);
-    const currentCreatedAt = Number(trip.createdAt || 0);
-    byId.set(trip.id, currentCreatedAt >= existingCreatedAt ? trip : existing);
   });
 
-  return Array.from(byId.values()).sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+  return Array.from(mergedMap.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 }
 
-/**
- * Renderiza una tarjeta de viaje.
- */
-function TripCard({ trip, t }) {
-  const paymentLabel = trip.paymentMethod
-    ? t(`rideOptions.paymentMethods.${trip.paymentMethod}`)
-    : t('common.notAvailable');
+function filterTripsByUser(trips, email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) {
+    return [];
+  }
 
+  return trips.filter(trip => String(trip?.userEmail || '').trim().toLowerCase() === normalizedEmail);
+}
+
+function TripCard({ trip, t }) {
   return (
     <View style={styles.card}>
       <Text style={styles.title}>{trip.origin} → {trip.destination}</Text>
-      <Text style={styles.detail}>{t('tripHistory.date')}: {trip.date}</Text>
-      <Text style={styles.detail}>{t('rideOptions.subtitle', { distance: trip.distance, eta: trip.eta })}</Text>
-      <Text style={styles.detail}>{t('tripHistory.cost')}: {trip.cost}</Text>
-      <Text style={styles.detail}>{t('tripHistory.status')}: {t(`rideOptions.status.${trip.status || 'idle'}`)}</Text>
-      <Text style={styles.detail}>{t('tripHistory.paymentMethod')}: {paymentLabel}</Text>
+      <Text style={styles.detail}>
+        {t('tripHistory.date')}: {trip.date || t('common.notAvailable')}
+      </Text>
+      <Text style={styles.detail}>
+        {t('tripHistory.cost')}: {trip.cost || t('common.notAvailable')}
+      </Text>
+      <Text style={styles.detail}>
+        {t('tripHistory.status')}: {t(`rideOptions.status.${trip.status || 'idle'}`)}
+      </Text>
+      <Text style={styles.detail}>
+        {t('tripHistory.paymentMethod')}: {t(`rideOptions.paymentMethods.${trip.paymentMethod || 'pending'}`)}
+      </Text>
     </View>
   );
 }
 
-/**
- * Pantalla principal del historial de viajes.
- */
 export default function TripHistoryScreen() {
-  const { t } = useTranslation();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const [isLoading, setIsLoading] = useState(false);
+  const activeUserEmail = useSelector(state => state.user.email);
   const trips = useSelector(state => state.tripHistory.trips);
-  const completedTrips = trips.filter(trip => ['completed', 'paid'].includes(trip.status));
 
-  useEffect(() => {
-    (async () => {
-      const persistedTrips = await loadTripsFromStorage();
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
 
-      if (!isFirebaseConfigured()) {
-        dispatch(setTrips(persistedTrips));
-        return;
-      }
+      const hydrateTrips = async () => {
+        setIsLoading(true);
 
-      const firebaseTrips = await loadTripsFromFirebase();
+        const [localTrips, remoteTrips] = await Promise.all([
+          loadTripsFromStorage(),
+          loadTripsFromFirebase(),
+        ]);
 
-      if (firebaseTrips.length === 0) {
-        if (persistedTrips.length > 0) {
-          await syncTripsToFirebase(persistedTrips);
+        if (!isMounted) {
+          return;
         }
-        dispatch(setTrips(persistedTrips));
-        return;
-      }
 
-      const mergedTrips = mergeTrips(firebaseTrips, persistedTrips).slice(0, 50);
-      dispatch(setTrips(mergedTrips));
-      await saveTripsToStorage(mergedTrips);
-    })();
-  }, [dispatch]);
+        const mergedTrips = mergeTrips(localTrips, remoteTrips);
+        const filteredTrips = filterTripsByUser(mergedTrips, activeUserEmail);
+        dispatch(setTrips(filteredTrips));
+        setIsLoading(false);
+      };
+
+      hydrateTrips();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [activeUserEmail, dispatch]),
+  );
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>{t('tripHistory.title')}</Text>
-      {completedTrips.length === 0 ? (
-        <Text style={styles.emptyText}>{t('tripHistory.empty')}</Text>
+
+      {isLoading ? (
+        <View style={styles.centerState}>
+          <ActivityIndicator size="small" color="#111827" />
+        </View>
       ) : (
         <FlatList
-          data={completedTrips}
+          data={trips}
           keyExtractor={item => item.id}
           renderItem={({ item }) => <TripCard trip={item} t={t} />}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={trips.length === 0 ? styles.emptyListContent : styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.centerState}>
+              <Text style={styles.emptyText}>{t('tripHistory.empty')}</Text>
+            </View>
+          }
         />
       )}
     </View>
@@ -117,16 +124,21 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 18,
+    marginBottom: 14,
     color: '#111827',
   },
   card: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
     borderRadius: 10,
     padding: 16,
     marginBottom: 14,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   title: {
     fontSize: 16,
@@ -142,8 +154,22 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 24,
   },
+  emptyListContent: {
+    flexGrow: 1,
+  },
+  centerState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+  },
   emptyText: {
     fontSize: 14,
     color: '#6B7280',
+    textAlign: 'center',
   },
 });

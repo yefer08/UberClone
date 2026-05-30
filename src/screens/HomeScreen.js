@@ -25,7 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import Config from 'react-native-config';
 import debounce from 'lodash.debounce';
@@ -51,6 +51,22 @@ import {
  * @returns {string} A short alphanumeric token.
  */
 const newSessionToken = () => Math.random().toString(36).slice(2);
+const DEFAULT_ORIGIN = {
+  lat: 6.2442,
+  lng: -75.5812,
+};
+const EMULATOR_DEFAULT_ORIGIN = {
+  lat: 37.421998,
+  lng: -122.084,
+};
+
+const isNearCoordinate = (value, target, threshold = 0.0005) =>
+  Math.abs(value - target) <= threshold;
+
+const isEmulatorDefaultOrigin = coords =>
+  !!coords &&
+  isNearCoordinate(coords.lat, EMULATOR_DEFAULT_ORIGIN.lat) &&
+  isNearCoordinate(coords.lng, EMULATOR_DEFAULT_ORIGIN.lng);
 
 /**
  * Requests ACCESS_FINE_LOCATION permission on Android at runtime.
@@ -85,6 +101,12 @@ function HomeScreen({ navigation }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const hasMapsApiKey = hasValidMapsApiKey(Config.GOOGLE_MAPS_API_KEY);
+  const { requestStatus, destinationLabel } = useSelector(state => state.ride);
+  const isTripActive =
+    requestStatus !== 'idle' &&
+    requestStatus !== 'cancelled' &&
+    requestStatus !== 'completed' &&
+    requestStatus !== 'paid';
 
   // Text currently shown in the search input
   const [query, setQuery] = useState('');
@@ -115,9 +137,18 @@ function HomeScreen({ navigation }) {
       }
       Geolocation.getCurrentPosition(
         position => {
-          setUserLocation({
+          const rawCoords = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
+          };
+          const safeCoords =
+            Platform.OS === 'android' && isEmulatorDefaultOrigin(rawCoords)
+              ? DEFAULT_ORIGIN
+              : rawCoords;
+
+          setUserLocation({
+            lat: safeCoords.lat,
+            lng: safeCoords.lng,
           });
         },
         error => console.warn('Geolocation error:', error.message),
@@ -268,6 +299,23 @@ function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{t('home.title')}</Text>
+      {isTripActive && (
+        <TouchableOpacity
+          style={styles.activeTripBanner}
+          onPress={() => navigation.navigate('RideOptions')}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.activeTripTitle}>{t('home.activeTripTitle')}</Text>
+          <Text style={styles.activeTripSubtitle}>
+            {t('home.activeTripStatus', { status: t(`rideOptions.status.${requestStatus}`) })}
+          </Text>
+          <Text style={styles.activeTripSubtitle}>
+            {t('home.activeTripDestination', {
+              destination: destinationLabel || t('common.notAvailable'),
+            })}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.mapCard}>
         {hasMapsApiKey ? (
@@ -387,6 +435,25 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 20,
     marginBottom: 14,
+  },
+  activeTripBanner: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  activeTripTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+  activeTripSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#1E3A8A',
   },
   mapCard: {
     marginHorizontal: 20,
